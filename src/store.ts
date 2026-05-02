@@ -221,6 +221,8 @@ interface AppState {
   duplicateElement: (id: string) => void;
   removeElement: (id: string) => void;
   updateElement: (id: string, patch: Partial<WardrobeElement>) => void;
+  toggleHidden: (id: string) => void;
+  showAll: () => void;
   resetActive: () => void;
 }
 
@@ -373,6 +375,32 @@ export const useStore = create<AppState>()(
                     elements: p.elements.map((e) =>
                       e.id === id ? { ...e, ...patch } : e
                     ),
+                  })
+                : p
+            ),
+          }));
+        },
+        toggleHidden: (id) => {
+          set((s) => ({
+            projects: s.projects.map((p) =>
+              p.id === s.activeId
+                ? touch({
+                    ...p,
+                    elements: p.elements.map((e) =>
+                      e.id === id ? { ...e, hidden: !e.hidden } : e
+                    ),
+                  })
+                : p
+            ),
+          }));
+        },
+        showAll: () => {
+          set((s) => ({
+            projects: s.projects.map((p) =>
+              p.id === s.activeId
+                ? touch({
+                    ...p,
+                    elements: p.elements.map((e) => ({ ...e, hidden: false })),
                   })
                 : p
             ),

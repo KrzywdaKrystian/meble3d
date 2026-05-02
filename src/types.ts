@@ -27,6 +27,7 @@ export interface WardrobeElement {
   color: string;
   quantity: number;
   notes?: string;
+  hidden?: boolean;
 }
 
 export interface Project {

@@ -389,6 +389,55 @@ textarea {
   background: rgba(255, 255, 255, 0.04);
 }
 
+.elist-item.hidden {
+  opacity: 0.55;
+}
+
+.elist-item.hidden .elist-name strong {
+  text-decoration: line-through;
+  color: var(--text-dim);
+}
+
+.elist-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.hidden-badge {
+  color: var(--text-dim);
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 11px;
+}
+
+.btn-sm {
+  padding: 6px 10px;
+  min-height: 32px;
+  font-size: 12px;
+}
+
+.icon-btn {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--text);
+  border-radius: 6px;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  font-size: 16px;
+  flex: 0 0 auto;
+  padding: 0;
+}
+
+.icon-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--primary);
+}
+
 .elist-color {
   width: 14px;
   height: 14px;

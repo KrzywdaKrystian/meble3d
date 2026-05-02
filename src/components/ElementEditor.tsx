@@ -167,6 +167,12 @@ function ElementForm({ el }: { el: WardrobeElement }) {
         <button className="btn ghost" onClick={() => setSelected(null)}>
           Zamknij
         </button>
+        <button
+          className="btn ghost"
+          onClick={() => updateElement(el.id, { hidden: !el.hidden })}
+        >
+          {el.hidden ? "Pokaż" : "Ukryj"}
+        </button>
         <button className="btn ghost" onClick={() => duplicateElement(el.id)}>
           Duplikuj
         </button>
@@ -190,8 +196,11 @@ export function ElementEditor() {
   const selectedId = useStore((s) => s.selectedElementId);
   const addElement = useStore((s) => s.addElement);
   const setSelected = useStore((s) => s.setSelected);
+  const toggleHidden = useStore((s) => s.toggleHidden);
+  const showAll = useStore((s) => s.showAll);
 
   const selected = project.elements.find((e) => e.id === selectedId);
+  const hiddenCount = project.elements.filter((e) => e.hidden).length;
 
   return (
     <div className="panel-content">
@@ -222,12 +231,28 @@ export function ElementEditor() {
         </div>
       )}
 
-      <div className="form-section-title">Elementy projektu ({project.elements.length})</div>
+      <div className="elist-header">
+        <div className="form-section-title">
+          Elementy projektu ({project.elements.length})
+          {hiddenCount > 0 && (
+            <span className="hidden-badge"> · ukryte: {hiddenCount}</span>
+          )}
+        </div>
+        {hiddenCount > 0 && (
+          <button className="btn ghost btn-sm" onClick={showAll}>
+            Pokaż wszystkie
+          </button>
+        )}
+      </div>
       <ul className="elist">
         {project.elements.map((el) => (
           <li
             key={el.id}
-            className={"elist-item" + (selectedId === el.id ? " active" : "")}
+            className={
+              "elist-item" +
+              (selectedId === el.id ? " active" : "") +
+              (el.hidden ? " hidden" : "")
+            }
             onClick={() => setSelected(el.id)}
           >
             <span className="elist-color" style={{ background: el.color }} />
@@ -239,6 +264,17 @@ export function ElementEditor() {
               </small>
             </span>
             <span className="elist-type">{ELEMENT_LABELS[el.type]}</span>
+            <button
+              className="icon-btn"
+              title={el.hidden ? "Pokaż" : "Ukryj"}
+              aria-label={el.hidden ? "Pokaż element" : "Ukryj element"}
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleHidden(el.id);
+              }}
+            >
+              {el.hidden ? "👁" : "⦸"}
+            </button>
           </li>
         ))}
       </ul>

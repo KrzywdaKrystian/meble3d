@@ -92,9 +92,11 @@ export function Wardrobe3D() {
       <Suspense fallback={null}>
         <Environment preset="apartment" />
         <group>
-          {project.elements.map((el) => (
-            <ElementMesh key={el.id} el={el} />
-          ))}
+          {project.elements
+            .filter((el) => !el.hidden)
+            .map((el) => (
+              <ElementMesh key={el.id} el={el} />
+            ))}
         </group>
       </Suspense>
 
