@@ -217,6 +217,7 @@ interface AppState {
   deleteProject: (id: string) => void;
   renameProject: (id: string, name: string) => void;
   setOuter: (w: number, h: number, d: number) => void;
+  scaleProject: (w: number, h: number, d: number) => void;
   addElement: (type: ElementType) => void;
   duplicateElement: (id: string) => void;
   removeElement: (id: string) => void;
@@ -291,6 +292,42 @@ export const useStore = create<AppState>()(
                 ? touch({ ...p, outerWidth: w, outerHeight: h, outerDepth: d })
                 : p
             ),
+          }));
+        },
+        scaleProject: (newW, newH, newD) => {
+          set((s) => ({
+            projects: s.projects.map((p) => {
+              if (p.id !== s.activeId) return p;
+              const rx = newW / Math.max(1, p.outerWidth);
+              const ry = newH / Math.max(1, p.outerHeight);
+              const rz = newD / Math.max(1, p.outerDepth);
+              const round = (v: number) => Math.round(v * 10) / 10;
+              const elements = p.elements.map((el) => {
+                // Wymiar skalujemy tylko, jeśli jest "konstrukcyjny" (znacznie
+                // większy od grubości materiału). Dzięki temu półki i wieńce
+                // zostają 18 mm, a boki / drzwi rozciągają się z szafą.
+                const t = Math.max(1, el.thickness);
+                const stretchX = el.width > t * 4;
+                const stretchY = el.height > t * 4;
+                const stretchZ = el.depth > t * 4;
+                return {
+                  ...el,
+                  width: stretchX ? Math.round(el.width * rx) : el.width,
+                  height: stretchY ? Math.round(el.height * ry) : el.height,
+                  depth: stretchZ ? Math.round(el.depth * rz) : el.depth,
+                  x: round(el.x * rx),
+                  y: round(el.y * ry),
+                  z: round(el.z * rz),
+                };
+              });
+              return touch({
+                ...p,
+                outerWidth: newW,
+                outerHeight: newH,
+                outerDepth: newD,
+                elements,
+              });
+            }),
           }));
         },
         addElement: (type) => {

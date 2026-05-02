@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useStore, useActiveProject } from "../store";
 
 export function ProjectPanel() {
@@ -10,9 +11,51 @@ export function ProjectPanel() {
     deleteProject,
     renameProject,
     setOuter,
+    scaleProject,
     resetActive,
   } = useStore();
   const project = useActiveProject();
+
+  const [scaleW, setScaleW] = useState<string>(String(project.outerWidth));
+  const [scaleH, setScaleH] = useState<string>(String(project.outerHeight));
+  const [scaleD, setScaleD] = useState<string>(String(project.outerDepth));
+
+  useEffect(() => {
+    setScaleW(String(project.outerWidth));
+    setScaleH(String(project.outerHeight));
+    setScaleD(String(project.outerDepth));
+  }, [project.id, project.outerWidth, project.outerHeight, project.outerDepth]);
+
+  const applyScale = () => {
+    const w = Math.max(100, parseFloat(scaleW) || project.outerWidth);
+    const h = Math.max(100, parseFloat(scaleH) || project.outerHeight);
+    const d = Math.max(100, parseFloat(scaleD) || project.outerDepth);
+    if (
+      w === project.outerWidth &&
+      h === project.outerHeight &&
+      d === project.outerDepth
+    )
+      return;
+    if (
+      confirm(
+        "Przeskalować szafę z " +
+          project.outerWidth +
+          " × " +
+          project.outerHeight +
+          " × " +
+          project.outerDepth +
+          " mm na " +
+          w +
+          " × " +
+          h +
+          " × " +
+          d +
+          " mm?\n\nWymiary konstrukcyjne (boki, plecy, drzwi) zostaną rozciągnięte. Półki, wieńce i drążki zachowają swoją grubość, ale ich pozycje zostaną przeliczone."
+      )
+    ) {
+      scaleProject(w, h, d);
+    }
+  };
 
   return (
     <div className="panel-content">
@@ -70,14 +113,75 @@ export function ProjectPanel() {
         </div>
       </div>
 
-      <div className="form-section-title">Wymiary gabarytowe (informacyjnie)</div>
+      <div className="form-section-title">Skaluj projekt</div>
       <p className="hint">
-        Te wartości pomagają tylko w pozycjonowaniu kamery i rysowaniu
-        pomocniczego boxu. Faktyczna szafa to suma elementów.
+        Wpisz docelowe wymiary szafy w&nbsp;mm. Boki, plecy i drzwi zostaną
+        rozciągnięte do nowej wysokości / szerokości, a&nbsp;półki i wieńce
+        zachowają grubość 18 mm – tylko ich pozycje się przeliczą.
       </p>
       <div className="form-row grid-3">
         <label className="field">
           <span className="field-label">Szerokość [mm]</span>
+          <span className="field-input">
+            <input
+              type="number"
+              inputMode="numeric"
+              value={scaleW}
+              onChange={(e) => setScaleW(e.target.value)}
+            />
+          </span>
+        </label>
+        <label className="field">
+          <span className="field-label">Wysokość [mm]</span>
+          <span className="field-input">
+            <input
+              type="number"
+              inputMode="numeric"
+              value={scaleH}
+              onChange={(e) => setScaleH(e.target.value)}
+            />
+          </span>
+        </label>
+        <label className="field">
+          <span className="field-label">Głębokość [mm]</span>
+          <span className="field-input">
+            <input
+              type="number"
+              inputMode="numeric"
+              value={scaleD}
+              onChange={(e) => setScaleD(e.target.value)}
+            />
+          </span>
+        </label>
+      </div>
+      <div className="form-actions">
+        <button className="btn primary" onClick={applyScale}>
+          Skaluj wszystkie elementy
+        </button>
+        <button
+          className="btn ghost"
+          onClick={() => {
+            setScaleW(String(project.outerWidth));
+            setScaleH(String(project.outerHeight));
+            setScaleD(String(project.outerDepth));
+          }}
+        >
+          Cofnij wpis
+        </button>
+      </div>
+      <p className="hint">
+        Aktualne gabaryty: {project.outerWidth} × {project.outerHeight} ×{" "}
+        {project.outerDepth} mm.
+      </p>
+
+      <div className="form-section-title">Gabaryty bez skalowania (tylko podgląd)</div>
+      <p className="hint">
+        Pozwala ręcznie zmienić wartości używane przez kamerę, bez ruszania
+        elementów. Użyj, jeśli sam ręcznie poprawiłeś elementy.
+      </p>
+      <div className="form-row grid-3">
+        <label className="field">
+          <span className="field-label">W [mm]</span>
           <span className="field-input">
             <input
               type="number"
@@ -94,7 +198,7 @@ export function ProjectPanel() {
           </span>
         </label>
         <label className="field">
-          <span className="field-label">Wysokość [mm]</span>
+          <span className="field-label">H [mm]</span>
           <span className="field-input">
             <input
               type="number"
@@ -111,7 +215,7 @@ export function ProjectPanel() {
           </span>
         </label>
         <label className="field">
-          <span className="field-label">Głębokość [mm]</span>
+          <span className="field-label">D [mm]</span>
           <span className="field-input">
             <input
               type="number"
