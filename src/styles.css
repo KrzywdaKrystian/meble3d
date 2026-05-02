@@ -438,6 +438,63 @@ textarea {
   border-color: var(--primary);
 }
 
+/* ===== Plinth chooser ===== */
+.plinth-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.plinth-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.plinth-card:hover {
+  border-color: var(--primary);
+}
+
+.plinth-card.active {
+  border-color: var(--primary);
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.plinth-card input[type="radio"] {
+  width: auto;
+  margin: 4px 0 0 0;
+  flex: 0 0 auto;
+  min-height: auto;
+  padding: 0;
+  background: transparent;
+  border: none;
+  accent-color: var(--primary);
+}
+
+.plinth-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.plinth-title {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.plinth-desc {
+  color: var(--text-dim);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
 .elist-color {
   width: 14px;
   height: 14px;

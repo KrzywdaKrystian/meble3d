@@ -5,6 +5,19 @@ import {
   useActiveRoom,
   useProjectsInActiveRoom,
 } from "../store";
+import {
+  PLINTH_DESCRIPTIONS,
+  PLINTH_LABELS,
+  PlinthType,
+} from "../types";
+
+const PLINTH_TYPES: PlinthType[] = [
+  "staly",
+  "regulowany",
+  "cofniety",
+  "brak",
+  "systemowy",
+];
 
 export function ProjectPanel() {
   const {
@@ -24,6 +37,7 @@ export function ProjectPanel() {
     renameProject,
     setOuter,
     scaleProject,
+    applyPlinth,
     resetActive,
   } = useStore();
   const project = useActiveProject();
@@ -34,11 +48,48 @@ export function ProjectPanel() {
   const [scaleH, setScaleH] = useState<string>(String(project.outerHeight));
   const [scaleD, setScaleD] = useState<string>(String(project.outerDepth));
 
+  const [plinthType, setPlinthType] = useState<PlinthType>(
+    project.plinthType ?? "staly"
+  );
+  const [plinthHeight, setPlinthHeight] = useState<string>(
+    String(project.plinthHeight ?? 100)
+  );
+  const [plinthRecess, setPlinthRecess] = useState<string>(
+    String(project.plinthRecess ?? 30)
+  );
+
   useEffect(() => {
     setScaleW(String(project.outerWidth));
     setScaleH(String(project.outerHeight));
     setScaleD(String(project.outerDepth));
-  }, [project.id, project.outerWidth, project.outerHeight, project.outerDepth]);
+    setPlinthType(project.plinthType ?? "staly");
+    setPlinthHeight(String(project.plinthHeight ?? 100));
+    setPlinthRecess(String(project.plinthRecess ?? 30));
+  }, [
+    project.id,
+    project.outerWidth,
+    project.outerHeight,
+    project.outerDepth,
+    project.plinthType,
+    project.plinthHeight,
+    project.plinthRecess,
+  ]);
+
+  const handleApplyPlinth = () => {
+    const h = Math.max(0, parseFloat(plinthHeight) || 0);
+    const r = Math.max(0, parseFloat(plinthRecess) || 0);
+    if (
+      confirm(
+        "Wymienić elementy cokołu na: „" +
+          PLINTH_LABELS[plinthType] +
+          "” (wys. " +
+          h +
+          " mm)?\n\nIstniejące elementy typu cokół i nóżka zostaną usunięte. Korpus szafy zostanie podniesiony / opuszczony tak, by spasował się z nowym cokołem."
+      )
+    ) {
+      applyPlinth(plinthType, h, r);
+    }
+  };
 
   const applyScale = () => {
     const w = Math.max(100, parseFloat(scaleW) || project.outerWidth);
@@ -256,6 +307,76 @@ export function ProjectPanel() {
           </li>
         ))}
       </ul>
+
+      <div className="form-section-title">Cokół</div>
+      <p className="hint">
+        Wybierz typ cokołu – po zastosowaniu odpowiednie elementy zostaną
+        wygenerowane (cokół, maskownica, nóżki) i pojawią się w&nbsp;liście
+        elementów dla stolarza.
+      </p>
+      <div className="plinth-options">
+        {PLINTH_TYPES.map((t) => (
+          <label
+            key={t}
+            className={
+              "plinth-card" + (plinthType === t ? " active" : "")
+            }
+          >
+            <input
+              type="radio"
+              name="plinth-type"
+              value={t}
+              checked={plinthType === t}
+              onChange={() => setPlinthType(t)}
+            />
+            <div className="plinth-card-body">
+              <div className="plinth-title">{PLINTH_LABELS[t]}</div>
+              <div className="plinth-desc">{PLINTH_DESCRIPTIONS[t]}</div>
+            </div>
+          </label>
+        ))}
+      </div>
+      <div className="form-row grid-3">
+        <label className="field">
+          <span className="field-label">Wysokość cokołu [mm]</span>
+          <span className="field-input">
+            <input
+              type="number"
+              inputMode="numeric"
+              value={plinthHeight}
+              onChange={(e) => setPlinthHeight(e.target.value)}
+            />
+          </span>
+        </label>
+        {plinthType === "cofniety" && (
+          <label className="field">
+            <span className="field-label">Cofnięcie [mm]</span>
+            <span className="field-input">
+              <input
+                type="number"
+                inputMode="numeric"
+                value={plinthRecess}
+                onChange={(e) => setPlinthRecess(e.target.value)}
+              />
+            </span>
+          </label>
+        )}
+      </div>
+      <div className="form-actions">
+        <button className="btn primary" onClick={handleApplyPlinth}>
+          Zastosuj cokół
+        </button>
+      </div>
+      {project.plinthType && (
+        <p className="hint">
+          Aktualny cokół: <strong>{PLINTH_LABELS[project.plinthType]}</strong>{" "}
+          · wysokość {project.plinthHeight ?? 0} mm
+          {project.plinthType === "cofniety"
+            ? ", cofnięty o " + (project.plinthRecess ?? 0) + " mm"
+            : ""}
+          .
+        </p>
+      )}
 
       <div className="form-section-title">Skaluj projekt</div>
       <p className="hint">

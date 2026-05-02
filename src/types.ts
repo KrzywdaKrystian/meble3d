@@ -7,6 +7,7 @@ export type ElementType =
   | "front-szuflady"
   | "drazek"
   | "cokol"
+  | "nozka"
   | "inny";
 
 export interface WardrobeElement {
@@ -41,7 +42,40 @@ export interface Project {
   outerWidth: number;
   outerHeight: number;
   outerDepth: number;
+  /** Konfiguracja cokołu */
+  plinthType?: PlinthType;
+  plinthHeight?: number;
+  /** Cofnięcie cokołu w mm – używane tylko dla typu „cofniety” */
+  plinthRecess?: number;
 }
+
+export type PlinthType =
+  | "staly"
+  | "regulowany"
+  | "cofniety"
+  | "brak"
+  | "systemowy";
+
+export const PLINTH_LABELS: Record<PlinthType, string> = {
+  staly: "Stały (zabudowany)",
+  regulowany: "Regulowany (nóżki + maskownica)",
+  cofniety: "Cofnięty (shadow gap)",
+  brak: "Brak / na nóżkach ozdobnych",
+  systemowy: "Systemowy (PVC / aluminium)",
+};
+
+export const PLINTH_DESCRIPTIONS: Record<PlinthType, string> = {
+  staly:
+    "Pełna listwa zabudowana, przymocowana na stałe do korpusu. Solidny i klasyczny wygląd, maskuje przestrzeń pod szafą.",
+  regulowany:
+    "4 regulowane nóżki + zatrzaskowa maskownica frontowa. Pozwala wypoziomować szafę na nierównej podłodze.",
+  cofniety:
+    "Listwa cofnięta o kilka cm pod korpus, dająca efekt unoszenia się szafy nad podłogą („shadow gap”).",
+  brak:
+    "Bez listwy cokołowej. Korpus stoi na ozdobnych nóżkach – łatwiej posprzątać, lekki designerski efekt.",
+  systemowy:
+    "Listwa systemowa z PVC / aluminium na regulowanych nóżkach. Typowe rozwiązanie do kuchni i zabudów.",
+};
 
 export interface Room {
   id: string;
@@ -58,6 +92,7 @@ export const ELEMENT_LABELS: Record<ElementType, string> = {
   "front-szuflady": "Front szuflady",
   drazek: "Drążek",
   cokol: "Cokół",
+  nozka: "Nóżka",
   inny: "Inny",
 };
 
@@ -70,6 +105,7 @@ export const ELEMENT_DEFAULT_COLOR: Record<ElementType, string> = {
   "front-szuflady": "#b89568",
   drazek: "#b0b0b0",
   cokol: "#8a6f4a",
+  nozka: "#3a3a3a",
   inny: "#9ca3af",
 };
 
@@ -82,5 +118,6 @@ export const ELEMENT_DEFAULT_THICKNESS: Record<ElementType, number> = {
   "front-szuflady": 18,
   drazek: 25,
   cokol: 18,
+  nozka: 50,
   inny: 18,
 };

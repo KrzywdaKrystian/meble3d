@@ -4,6 +4,7 @@ import {
   ELEMENT_DEFAULT_COLOR,
   ELEMENT_DEFAULT_THICKNESS,
   ELEMENT_LABELS,
+  PlinthType,
   Project,
   Room,
   WardrobeElement,
@@ -205,7 +206,164 @@ function buildDefaultProject(roomId: string, name = "Nowa szafa"): Project {
     outerWidth: 1000,
     outerHeight: 2200,
     outerDepth: 600,
+    plinthType: "staly",
+    plinthHeight: 100,
+    plinthRecess: 30,
   };
+}
+
+/**
+ * Generuje listę elementów cokołu/nóżek dla zadanego typu cokołu.
+ * Zwraca elementy gotowe do wstawienia (bez id).
+ */
+function buildPlinthElements(
+  type: PlinthType,
+  outerWidth: number,
+  outerDepth: number,
+  height: number,
+  recess: number
+): Omit<WardrobeElement, "id">[] {
+  if (height <= 0 && type !== "brak") return [];
+  const t = 18;
+  const els: Omit<WardrobeElement, "id">[] = [];
+  const halfW = outerWidth / 2;
+  const halfD = outerDepth / 2;
+
+  const legSize = 50;
+  const legInset = 60;
+  const legPositions = (): Array<[number, number]> => [
+    [-halfW + legInset + legSize / 2, -halfD + legInset + legSize / 2],
+    [halfW - legInset - legSize / 2, -halfD + legInset + legSize / 2],
+    [-halfW + legInset + legSize / 2, halfD - legInset - legSize / 2],
+    [halfW - legInset - legSize / 2, halfD - legInset - legSize / 2],
+  ];
+
+  if (type === "staly") {
+    els.push({
+      type: "cokol",
+      name: "Cokół przedni (zabudowany)",
+      width: outerWidth,
+      height,
+      depth: t,
+      x: 0,
+      y: height / 2,
+      z: halfD - t / 2,
+      thickness: t,
+      material: "Płyta meblowa 18 mm",
+      color: ELEMENT_DEFAULT_COLOR.cokol,
+      quantity: 1,
+    });
+  } else if (type === "regulowany") {
+    legPositions().forEach(([x, z], i) => {
+      els.push({
+        type: "nozka",
+        name: "Nóżka regulowana " + (i + 1),
+        width: legSize,
+        height,
+        depth: legSize,
+        x,
+        y: height / 2,
+        z,
+        thickness: legSize,
+        material: "Nóżka regulowana ABS / metal",
+        color: ELEMENT_DEFAULT_COLOR.nozka,
+        quantity: 1,
+      });
+    });
+    const maskH = Math.max(20, height - 10);
+    els.push({
+      type: "cokol",
+      name: "Maskownica frontowa",
+      width: outerWidth,
+      height: maskH,
+      depth: t,
+      x: 0,
+      y: 10 + maskH / 2,
+      z: halfD - t / 2,
+      thickness: t,
+      material: "Płyta meblowa 18 mm (na klipsach)",
+      color: ELEMENT_DEFAULT_COLOR.cokol,
+      quantity: 1,
+    });
+  } else if (type === "cofniety") {
+    const r = Math.max(0, recess);
+    els.push({
+      type: "cokol",
+      name: "Cokół cofnięty (shadow gap)",
+      width: outerWidth - 2 * t,
+      height,
+      depth: t,
+      x: 0,
+      y: height / 2,
+      z: halfD - r - t / 2,
+      thickness: t,
+      material: "Płyta meblowa 18 mm",
+      color: ELEMENT_DEFAULT_COLOR.cokol,
+      quantity: 1,
+      notes: "Cofnięty o " + r + " mm względem frontu",
+    });
+  } else if (type === "brak") {
+    if (height > 0) {
+      const decoSize = 60;
+      const decoInset = 30;
+      const positions: Array<[number, number]> = [
+        [-halfW + decoInset + decoSize / 2, -halfD + decoInset + decoSize / 2],
+        [halfW - decoInset - decoSize / 2, -halfD + decoInset + decoSize / 2],
+        [-halfW + decoInset + decoSize / 2, halfD - decoInset - decoSize / 2],
+        [halfW - decoInset - decoSize / 2, halfD - decoInset - decoSize / 2],
+      ];
+      positions.forEach(([x, z], i) => {
+        els.push({
+          type: "nozka",
+          name: "Nóżka ozdobna " + (i + 1),
+          width: decoSize,
+          height,
+          depth: decoSize,
+          x,
+          y: height / 2,
+          z,
+          thickness: decoSize,
+          material: "Nóżka drewniana ozdobna",
+          color: "#5a4a35",
+          quantity: 1,
+        });
+      });
+    }
+  } else if (type === "systemowy") {
+    legPositions().forEach(([x, z], i) => {
+      els.push({
+        type: "nozka",
+        name: "Nóżka systemowa " + (i + 1),
+        width: legSize,
+        height,
+        depth: legSize,
+        x,
+        y: height / 2,
+        z,
+        thickness: legSize,
+        material: "Nóżka systemowa regulowana",
+        color: ELEMENT_DEFAULT_COLOR.nozka,
+        quantity: 1,
+      });
+    });
+    const stripH = Math.max(20, height - 5);
+    els.push({
+      type: "cokol",
+      name: "Listwa cokołowa systemowa",
+      width: outerWidth,
+      height: stripH,
+      depth: 5,
+      x: 0,
+      y: 5 + stripH / 2,
+      z: halfD - 2.5,
+      thickness: 5,
+      material: "PVC / aluminium",
+      color: "#aaaaaa",
+      quantity: 1,
+    });
+  }
+
+  return els;
 }
 
 function buildEmptyProject(roomId: string, name = "Nowy projekt"): Project {
@@ -249,6 +407,7 @@ interface AppState {
   moveProjectToRoom: (projectId: string, roomId: string) => void;
   setOuter: (w: number, h: number, d: number) => void;
   scaleProject: (w: number, h: number, d: number) => void;
+  applyPlinth: (type: PlinthType, height: number, recess?: number) => void;
   addElement: (type: ElementType) => void;
   duplicateElement: (id: string) => void;
   removeElement: (id: string) => void;
@@ -427,6 +586,35 @@ export const useStore = create<AppState>()(
                 ? touch({ ...p, outerWidth: w, outerHeight: h, outerDepth: d })
                 : p
             ),
+          }));
+        },
+        applyPlinth: (type, height, recess) => {
+          set((s) => ({
+            projects: s.projects.map((p) => {
+              if (p.id !== s.activeId) return p;
+              const oldHeight = p.plinthHeight ?? 100;
+              const dy = height - oldHeight;
+              // Wszystko, co nie jest cokołem ani nóżką, to korpus szafy.
+              // Jeśli zmieniamy wysokość cokołu, podnosimy / opuszczamy korpus
+              // o tę samą wartość, żeby siadał na nowym cokole.
+              const carcass = p.elements
+                .filter((e) => e.type !== "cokol" && e.type !== "nozka")
+                .map((e) => (dy ? { ...e, y: e.y + dy } : e));
+              const plinth = buildPlinthElements(
+                type,
+                p.outerWidth,
+                p.outerDepth,
+                Math.max(0, height),
+                Math.max(0, recess ?? p.plinthRecess ?? 30)
+              ).map((e) => ({ id: uid(), ...e }));
+              return touch({
+                ...p,
+                elements: [...carcass, ...plinth],
+                plinthType: type,
+                plinthHeight: height,
+                plinthRecess: recess ?? p.plinthRecess ?? 30,
+              });
+            }),
           }));
         },
         scaleProject: (newW, newH, newD) => {
