@@ -1,11 +1,23 @@
 import { useEffect, useState } from "react";
-import { useStore, useActiveProject } from "../store";
+import {
+  useStore,
+  useActiveProject,
+  useActiveRoom,
+  useProjectsInActiveRoom,
+} from "../store";
 
 export function ProjectPanel() {
   const {
+    rooms,
     projects,
     activeId,
+    activeRoomId,
     setActive,
+    setActiveRoom,
+    addRoom,
+    renameRoom,
+    deleteRoom,
+    moveProjectToRoom,
     newProject,
     duplicateProject,
     deleteProject,
@@ -15,6 +27,8 @@ export function ProjectPanel() {
     resetActive,
   } = useStore();
   const project = useActiveProject();
+  const room = useActiveRoom();
+  const projectsInRoom = useProjectsInActiveRoom();
 
   const [scaleW, setScaleW] = useState<string>(String(project.outerWidth));
   const [scaleH, setScaleH] = useState<string>(String(project.outerHeight));
@@ -57,9 +71,82 @@ export function ProjectPanel() {
     }
   };
 
+  const handleAddRoom = () => {
+    const name = prompt("Nazwa nowego pokoju (np. Sypialnia):", "");
+    if (name && name.trim()) {
+      addRoom(name.trim());
+    }
+  };
+
+  const handleDeleteRoom = () => {
+    const inRoom = projects.filter((p) => p.roomId === room.id);
+    const msg =
+      "Usunąć pokój „" +
+      room.name +
+      "”" +
+      (inRoom.length > 0
+        ? " razem z " + inRoom.length + " projektami w środku?"
+        : "?");
+    if (confirm(msg)) {
+      deleteRoom(room.id);
+    }
+  };
+
   return (
     <div className="panel-content">
-      <div className="form-section-title">Projekt</div>
+      <div className="form-section-title">Pokój</div>
+      <div className="form">
+        <div className="form-row">
+          <label className="field">
+            <span className="field-label">Aktywny pokój</span>
+            <span className="field-input">
+              <select
+                value={activeRoomId}
+                onChange={(e) => setActiveRoom(e.target.value)}
+              >
+                {rooms.map((r) => {
+                  const count = projects.filter(
+                    (p) => p.roomId === r.id
+                  ).length;
+                  return (
+                    <option key={r.id} value={r.id}>
+                      {r.name} ({count})
+                    </option>
+                  );
+                })}
+              </select>
+            </span>
+          </label>
+        </div>
+        <div className="form-row">
+          <label className="field">
+            <span className="field-label">Nazwa pokoju</span>
+            <span className="field-input">
+              <input
+                type="text"
+                value={room.name}
+                onChange={(e) => renameRoom(room.id, e.target.value)}
+              />
+            </span>
+          </label>
+        </div>
+        <div className="form-actions">
+          <button className="btn primary" onClick={handleAddRoom}>
+            + Nowy pokój
+          </button>
+          <button
+            className="btn danger"
+            onClick={handleDeleteRoom}
+            disabled={rooms.length === 1 && projects.length <= 1}
+          >
+            Usuń pokój
+          </button>
+        </div>
+      </div>
+
+      <div className="form-section-title">
+        Projekty w pokoju „{room.name}" ({projectsInRoom.length})
+      </div>
       <div className="form">
         <div className="form-row">
           <label className="field">
@@ -69,7 +156,7 @@ export function ProjectPanel() {
                 value={activeId}
                 onChange={(e) => setActive(e.target.value)}
               >
-                {projects.map((p) => (
+                {projectsInRoom.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name}
                   </option>
@@ -90,10 +177,43 @@ export function ProjectPanel() {
             </span>
           </label>
         </div>
-
+        {rooms.length > 1 && (
+          <div className="form-row">
+            <label className="field">
+              <span className="field-label">Przenieś projekt do pokoju</span>
+              <span className="field-input">
+                <select
+                  value={project.roomId}
+                  onChange={(e) =>
+                    moveProjectToRoom(project.id, e.target.value)
+                  }
+                >
+                  {rooms.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.name}
+                    </option>
+                  ))}
+                </select>
+              </span>
+            </label>
+          </div>
+        )}
         <div className="form-actions">
-          <button className="btn primary" onClick={newProject}>
-            + Nowy
+          <button
+            className="btn primary"
+            onClick={() => newProject()}
+            title="Dodaj nowy projekt z szablonem domyślnej szafy"
+          >
+            + Z szablonu
+          </button>
+          <button
+            className="btn ghost"
+            onClick={() =>
+              newProject({ empty: true, name: "Nowa zabudowa" })
+            }
+            title="Dodaj pusty projekt do samodzielnego zaprojektowania"
+          >
+            + Pusty
           </button>
           <button className="btn ghost" onClick={duplicateProject}>
             Duplikuj
@@ -102,7 +222,9 @@ export function ProjectPanel() {
             className="btn danger"
             onClick={() => {
               if (
-                confirm("Usunąć projekt „" + project.name + "”? (nieodwracalne)")
+                confirm(
+                  "Usunąć projekt „" + project.name + "”? (nieodwracalne)"
+                )
               ) {
                 deleteProject(project.id);
               }
@@ -112,6 +234,28 @@ export function ProjectPanel() {
           </button>
         </div>
       </div>
+
+      <ul className="elist">
+        {projectsInRoom.map((p) => (
+          <li
+            key={p.id}
+            className={"elist-item" + (p.id === activeId ? " active" : "")}
+            onClick={() => setActive(p.id)}
+          >
+            <span
+              className="elist-color"
+              style={{ background: p.id === activeId ? "#3b82f6" : "#475569" }}
+            />
+            <span className="elist-name">
+              <strong>{p.name}</strong>
+              <small>
+                {p.elements.length} elementów ·{" "}
+                {new Date(p.updatedAt).toLocaleDateString("pl-PL")}
+              </small>
+            </span>
+          </li>
+        ))}
+      </ul>
 
       <div className="form-section-title">Skaluj projekt</div>
       <p className="hint">
@@ -250,29 +394,6 @@ export function ProjectPanel() {
           Wczytaj szablon: szafa 2-drzwiowa
         </button>
       </div>
-
-      <div className="form-section-title">Twoje projekty</div>
-      <ul className="elist">
-        {projects.map((p) => (
-          <li
-            key={p.id}
-            className={"elist-item" + (p.id === activeId ? " active" : "")}
-            onClick={() => setActive(p.id)}
-          >
-            <span
-              className="elist-color"
-              style={{ background: p.id === activeId ? "#3b82f6" : "#475569" }}
-            />
-            <span className="elist-name">
-              <strong>{p.name}</strong>
-              <small>
-                {p.elements.length} elementów ·{" "}
-                {new Date(p.updatedAt).toLocaleDateString("pl-PL")}
-              </small>
-            </span>
-          </li>
-        ))}
-      </ul>
     </div>
   );
 }

@@ -32,6 +32,7 @@ export interface WardrobeElement {
 
 export interface Project {
   id: string;
+  roomId: string;
   name: string;
   createdAt: number;
   updatedAt: number;
@@ -40,6 +41,12 @@ export interface Project {
   outerWidth: number;
   outerHeight: number;
   outerDepth: number;
+}
+
+export interface Room {
+  id: string;
+  name: string;
+  createdAt: number;
 }
 
 export const ELEMENT_LABELS: Record<ElementType, string> = {

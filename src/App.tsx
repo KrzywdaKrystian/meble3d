@@ -3,7 +3,7 @@ import { Wardrobe3D } from "./components/Wardrobe3D";
 import { ElementEditor } from "./components/ElementEditor";
 import { PartsList } from "./components/PartsList";
 import { ProjectPanel } from "./components/ProjectPanel";
-import { useActiveProject } from "./store";
+import { useActiveProject, useActiveRoom } from "./store";
 
 type Tab = "elements" | "parts" | "project";
 
@@ -16,6 +16,7 @@ const TABS: { id: Tab; label: string; icon: string }[] = [
 export default function App() {
   const [tab, setTab] = useState<Tab>("elements");
   const project = useActiveProject();
+  const room = useActiveRoom();
 
   return (
     <div className="app">
@@ -23,7 +24,7 @@ export default function App() {
         <div className="brand">
           <span className="brand-mark">M3D</span>
           <div>
-            <div className="brand-title">Meble3D</div>
+            <div className="brand-title">{room.name}</div>
             <div className="brand-sub">{project.name}</div>
           </div>
         </div>

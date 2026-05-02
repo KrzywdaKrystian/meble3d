@@ -5,6 +5,7 @@ import {
   ELEMENT_DEFAULT_THICKNESS,
   ELEMENT_LABELS,
   Project,
+  Room,
   WardrobeElement,
   ElementType,
 } from "./types";
@@ -193,10 +194,11 @@ function buildDefaultWardrobe(): WardrobeElement[] {
   return els;
 }
 
-function buildDefaultProject(): Project {
+function buildDefaultProject(roomId: string, name = "Nowa szafa"): Project {
   return {
     id: uid(),
-    name: "Nowa szafa",
+    roomId,
+    name,
     createdAt: Date.now(),
     updatedAt: Date.now(),
     elements: buildDefaultWardrobe(),
@@ -206,16 +208,45 @@ function buildDefaultProject(): Project {
   };
 }
 
+function buildEmptyProject(roomId: string, name = "Nowy projekt"): Project {
+  return {
+    id: uid(),
+    roomId,
+    name,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    elements: [],
+    outerWidth: 1000,
+    outerHeight: 2200,
+    outerDepth: 600,
+  };
+}
+
+function buildDefaultRoom(name = "Mieszkanie"): Room {
+  return {
+    id: uid(),
+    name,
+    createdAt: Date.now(),
+  };
+}
+
 interface AppState {
+  rooms: Room[];
   projects: Project[];
+  activeRoomId: string;
   activeId: string;
   selectedElementId: string | null;
   setActive: (id: string) => void;
   setSelected: (id: string | null) => void;
-  newProject: () => void;
+  setActiveRoom: (roomId: string) => void;
+  addRoom: (name?: string) => void;
+  renameRoom: (id: string, name: string) => void;
+  deleteRoom: (id: string) => void;
+  newProject: (opts?: { empty?: boolean; name?: string }) => void;
   duplicateProject: () => void;
   deleteProject: (id: string) => void;
   renameProject: (id: string, name: string) => void;
+  moveProjectToRoom: (projectId: string, roomId: string) => void;
   setOuter: (w: number, h: number, d: number) => void;
   scaleProject: (w: number, h: number, d: number) => void;
   addElement: (type: ElementType) => void;
@@ -234,20 +265,103 @@ function touch(p: Project): Project {
 export const useStore = create<AppState>()(
   persist(
     (set, get) => {
-      const initial = buildDefaultProject();
+      const initialRoom = buildDefaultRoom();
+      const initialProject = buildDefaultProject(initialRoom.id);
       return {
-        projects: [initial],
-        activeId: initial.id,
+        rooms: [initialRoom],
+        projects: [initialProject],
+        activeRoomId: initialRoom.id,
+        activeId: initialProject.id,
         selectedElementId: null,
-        setActive: (id) => set({ activeId: id, selectedElementId: null }),
+        setActive: (id) =>
+          set((s) => {
+            const proj = s.projects.find((p) => p.id === id);
+            if (!proj) return {};
+            return {
+              activeId: id,
+              activeRoomId: proj.roomId,
+              selectedElementId: null,
+            };
+          }),
         setSelected: (id) => set({ selectedElementId: id }),
-        newProject: () => {
-          const p = buildDefaultProject();
+        setActiveRoom: (roomId) =>
+          set((s) => {
+            const room = s.rooms.find((r) => r.id === roomId);
+            if (!room) return {};
+            // Wybieramy pierwszy projekt z tego pokoju (lub bieżący, gdy
+            // pokój jest pusty – wtedy 3D pokaże komunikat).
+            const inRoom = s.projects.filter((p) => p.roomId === roomId);
+            return {
+              activeRoomId: roomId,
+              activeId: inRoom[0]?.id ?? s.activeId,
+              selectedElementId: null,
+            };
+          }),
+        addRoom: (name) => {
+          const room = buildDefaultRoom(name || "Nowy pokój");
+          // Każdy pokój dostaje pusty placeholder, żeby UI miał co zaznaczyć.
+          const proj = buildEmptyProject(room.id, "Nowa zabudowa");
           set((s) => ({
-            projects: [...s.projects, p],
-            activeId: p.id,
+            rooms: [...s.rooms, room],
+            projects: [...s.projects, proj],
+            activeRoomId: room.id,
+            activeId: proj.id,
             selectedElementId: null,
           }));
+        },
+        renameRoom: (id, name) => {
+          set((s) => ({
+            rooms: s.rooms.map((r) => (r.id === id ? { ...r, name } : r)),
+          }));
+        },
+        deleteRoom: (id) => {
+          set((s) => {
+            const remainingRooms = s.rooms.filter((r) => r.id !== id);
+            // Jeśli usuwamy ostatni pokój, tworzymy nowy domyślny żeby app
+            // zawsze miała co pokazać.
+            if (remainingRooms.length === 0) {
+              const fresh = buildDefaultRoom();
+              const freshProj = buildDefaultProject(fresh.id);
+              return {
+                rooms: [fresh],
+                projects: [freshProj],
+                activeRoomId: fresh.id,
+                activeId: freshProj.id,
+                selectedElementId: null,
+              };
+            }
+            const remainingProjects = s.projects.filter(
+              (p) => p.roomId !== id
+            );
+            const nextRoom =
+              remainingRooms.find((r) => r.id === s.activeRoomId) ??
+              remainingRooms[0];
+            const nextProj = remainingProjects.find(
+              (p) => p.roomId === nextRoom.id
+            );
+            return {
+              rooms: remainingRooms,
+              projects: remainingProjects,
+              activeRoomId: nextRoom.id,
+              activeId: nextProj?.id ?? s.activeId,
+              selectedElementId: null,
+            };
+          });
+        },
+        newProject: (opts) => {
+          set((s) => {
+            const roomId = s.activeRoomId || s.rooms[0]?.id;
+            if (!roomId) return {};
+            const p = opts?.empty
+              ? buildEmptyProject(roomId, opts.name)
+              : buildDefaultProject(roomId, opts?.name);
+            return {
+              projects: [...s.projects, p],
+              activeId: p.id,
+              activeRoomId: roomId,
+              selectedElementId: null,
+            };
+          });
         },
         duplicateProject: () => {
           const { projects, activeId } = get();
@@ -264,19 +378,40 @@ export const useStore = create<AppState>()(
           set((s) => ({
             projects: [...s.projects, copy],
             activeId: copy.id,
+            activeRoomId: copy.roomId,
             selectedElementId: null,
           }));
         },
         deleteProject: (id) => {
           set((s) => {
+            const removed = s.projects.find((p) => p.id === id);
             const remaining = s.projects.filter((p) => p.id !== id);
-            const next = remaining.length ? remaining : [buildDefaultProject()];
+            const roomId = removed?.roomId ?? s.activeRoomId;
+            // Jeśli właśnie usunęliśmy ostatni projekt w tym pokoju,
+            // tworzymy w nim nowy domyślny, żeby pokój nie był martwy.
+            const stillInRoom = remaining.filter((p) => p.roomId === roomId);
+            const next =
+              stillInRoom.length > 0
+                ? remaining
+                : [...remaining, buildDefaultProject(roomId)];
+            const nextActive =
+              next.find((p) => p.roomId === roomId) ?? next[0];
             return {
               projects: next,
-              activeId: next[0].id,
+              activeId: nextActive.id,
+              activeRoomId: nextActive.roomId,
               selectedElementId: null,
             };
           });
+        },
+        moveProjectToRoom: (projectId, roomId) => {
+          set((s) => ({
+            projects: s.projects.map((p) =>
+              p.id === projectId ? touch({ ...p, roomId }) : p
+            ),
+            activeRoomId:
+              s.activeId === projectId ? roomId : s.activeRoomId,
+          }));
         },
         renameProject: (id, name) => {
           set((s) => ({
@@ -457,7 +592,31 @@ export const useStore = create<AppState>()(
     },
     {
       name: "meble3d-store-v1",
-      version: 1,
+      version: 2,
+      migrate: (persistedState: any, fromVersion: number) => {
+        if (!persistedState) return persistedState;
+        if (fromVersion < 2) {
+          // Stara wersja: tylko `projects[]` bez pokoi. Tworzymy domyślny
+          // pokój i przypisujemy do niego wszystkie istniejące projekty.
+          const defaultRoom = buildDefaultRoom("Mieszkanie");
+          const projects: Project[] = (persistedState.projects ?? []).map(
+            (p: any) => ({
+              ...p,
+              roomId: defaultRoom.id,
+            })
+          );
+          return {
+            ...persistedState,
+            rooms: [defaultRoom],
+            activeRoomId: defaultRoom.id,
+            projects: projects.length
+              ? projects
+              : [buildDefaultProject(defaultRoom.id)],
+            activeId: projects[0]?.id ?? persistedState.activeId,
+          };
+        }
+        return persistedState;
+      },
     }
   )
 );
@@ -465,4 +624,14 @@ export const useStore = create<AppState>()(
 export function useActiveProject(): Project {
   const { projects, activeId } = useStore();
   return projects.find((p) => p.id === activeId) ?? projects[0];
+}
+
+export function useActiveRoom(): Room {
+  const { rooms, activeRoomId } = useStore();
+  return rooms.find((r) => r.id === activeRoomId) ?? rooms[0];
+}
+
+export function useProjectsInActiveRoom(): Project[] {
+  const { projects, activeRoomId } = useStore();
+  return projects.filter((p) => p.roomId === activeRoomId);
 }
