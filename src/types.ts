@@ -31,22 +31,37 @@ export interface WardrobeElement {
   hidden?: boolean;
 }
 
+/**
+ * Pojedyncza szafa / moduł / zabudowa stojąca w obrębie projektu.
+ * Projekt może zawierać wiele szaf ustawionych obok siebie.
+ */
+export interface Cabinet {
+  id: string;
+  name: string;
+  /** Przesunięcie środka szafy w mm względem środka projektu (X = lewo/prawo) */
+  offsetX: number;
+  /** Y w mm: przydatne dla szafek wiszących (domyślnie 0 = na podłodze) */
+  offsetY: number;
+  /** Z w mm: korekta głębokości jeśli moduły różnią się głębokością */
+  offsetZ: number;
+  /** Wymiary gabarytowe szafy w mm */
+  outerWidth: number;
+  outerHeight: number;
+  outerDepth: number;
+  /** Konfiguracja cokołu w obrębie tej szafy */
+  plinthType?: PlinthType;
+  plinthHeight?: number;
+  plinthRecess?: number;
+  elements: WardrobeElement[];
+}
+
 export interface Project {
   id: string;
   roomId: string;
   name: string;
   createdAt: number;
   updatedAt: number;
-  elements: WardrobeElement[];
-  /** Wymiary gabarytowe szafy w mm – służą tylko do podpowiedzi/podglądu */
-  outerWidth: number;
-  outerHeight: number;
-  outerDepth: number;
-  /** Konfiguracja cokołu */
-  plinthType?: PlinthType;
-  plinthHeight?: number;
-  /** Cofnięcie cokołu w mm – używane tylko dla typu „cofniety” */
-  plinthRecess?: number;
+  cabinets: Cabinet[];
 }
 
 export type PlinthType =

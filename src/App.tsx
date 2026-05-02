@@ -3,7 +3,11 @@ import { Wardrobe3D } from "./components/Wardrobe3D";
 import { ElementEditor } from "./components/ElementEditor";
 import { PartsList } from "./components/PartsList";
 import { ProjectPanel } from "./components/ProjectPanel";
-import { useActiveProject, useActiveRoom } from "./store";
+import {
+  useActiveProject,
+  useActiveRoom,
+  useActiveCabinet,
+} from "./store";
 
 type Tab = "elements" | "parts" | "project";
 
@@ -17,6 +21,12 @@ export default function App() {
   const [tab, setTab] = useState<Tab>("elements");
   const project = useActiveProject();
   const room = useActiveRoom();
+  const cabinet = useActiveCabinet();
+
+  const totalElements = project.cabinets.reduce(
+    (s, c) => s + c.elements.length,
+    0
+  );
 
   return (
     <div className="app">
@@ -24,13 +34,20 @@ export default function App() {
         <div className="brand">
           <span className="brand-mark">M3D</span>
           <div>
-            <div className="brand-title">{room.name}</div>
-            <div className="brand-sub">{project.name}</div>
+            <div className="brand-title">
+              {room.name} · {project.name}
+            </div>
+            <div className="brand-sub">
+              {project.cabinets.length > 1
+                ? cabinet.name +
+                  " · " +
+                  project.cabinets.length +
+                  " szaf w projekcie"
+                : cabinet.name}
+            </div>
           </div>
         </div>
-        <div className="topbar-meta">
-          {project.elements.length} elementów
-        </div>
+        <div className="topbar-meta">{totalElements} elementów</div>
       </header>
 
       <main className="main">

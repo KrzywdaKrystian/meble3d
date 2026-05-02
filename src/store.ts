@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import {
+  Cabinet,
   ELEMENT_DEFAULT_COLOR,
   ELEMENT_DEFAULT_THICKNESS,
   ELEMENT_LABELS,
@@ -16,24 +17,22 @@ const uid = () =>
     ? crypto.randomUUID()
     : Math.random().toString(36).slice(2) + Date.now().toString(36);
 
-function buildDefaultWardrobe(): WardrobeElement[] {
-  // Domyślna szafa 1000 x 2200 x 600 mm zbudowana z typowych elementów.
-  const W = 1000;
-  const H = 2200;
-  const D = 600;
+// ===== Domyślne elementy szafy =====
+
+function buildDefaultWardrobeElements(
+  W = 1000,
+  H = 2200,
+  D = 600
+): Omit<WardrobeElement, "id">[] {
   const t = 18;
   const backT = 3;
   const plinthH = 100;
-
   const innerH = H - 2 * t - plinthH;
   const innerW = W - 2 * t;
-
-  const els: WardrobeElement[] = [];
-  const push = (e: Omit<WardrobeElement, "id">) =>
-    els.push({ id: uid(), ...e });
+  const els: Omit<WardrobeElement, "id">[] = [];
 
   // Cokół
-  push({
+  els.push({
     type: "cokol",
     name: "Cokół przedni",
     width: W,
@@ -47,9 +46,8 @@ function buildDefaultWardrobe(): WardrobeElement[] {
     color: ELEMENT_DEFAULT_COLOR.cokol,
     quantity: 1,
   });
-
   // Wieniec dolny
-  push({
+  els.push({
     type: "wieniec",
     name: "Wieniec dolny",
     width: W - 2 * t,
@@ -63,9 +61,8 @@ function buildDefaultWardrobe(): WardrobeElement[] {
     color: ELEMENT_DEFAULT_COLOR.wieniec,
     quantity: 1,
   });
-
   // Wieniec górny
-  push({
+  els.push({
     type: "wieniec",
     name: "Wieniec górny",
     width: W - 2 * t,
@@ -79,9 +76,8 @@ function buildDefaultWardrobe(): WardrobeElement[] {
     color: ELEMENT_DEFAULT_COLOR.wieniec,
     quantity: 1,
   });
-
   // Bok lewy
-  push({
+  els.push({
     type: "bok",
     name: "Bok lewy",
     width: t,
@@ -95,9 +91,8 @@ function buildDefaultWardrobe(): WardrobeElement[] {
     color: ELEMENT_DEFAULT_COLOR.bok,
     quantity: 1,
   });
-
   // Bok prawy
-  push({
+  els.push({
     type: "bok",
     name: "Bok prawy",
     width: t,
@@ -111,9 +106,8 @@ function buildDefaultWardrobe(): WardrobeElement[] {
     color: ELEMENT_DEFAULT_COLOR.bok,
     quantity: 1,
   });
-
-  // Plecy HDF
-  push({
+  // Plecy
+  els.push({
     type: "plecy",
     name: "Plecy HDF",
     width: W,
@@ -127,9 +121,8 @@ function buildDefaultWardrobe(): WardrobeElement[] {
     color: ELEMENT_DEFAULT_COLOR.plecy,
     quantity: 1,
   });
-
-  // Półka środkowa
-  push({
+  // Półka
+  els.push({
     type: "polka",
     name: "Półka",
     width: innerW,
@@ -143,9 +136,8 @@ function buildDefaultWardrobe(): WardrobeElement[] {
     color: ELEMENT_DEFAULT_COLOR.polka,
     quantity: 1,
   });
-
-  // Drążek na ubrania (w górnej części)
-  push({
+  // Drążek
+  els.push({
     type: "drazek",
     name: "Drążek",
     width: innerW,
@@ -159,9 +151,8 @@ function buildDefaultWardrobe(): WardrobeElement[] {
     color: ELEMENT_DEFAULT_COLOR.drazek,
     quantity: 1,
   });
-
   // Drzwi lewe
-  push({
+  els.push({
     type: "drzwi",
     name: "Drzwi lewe",
     width: W / 2 - 3,
@@ -175,9 +166,8 @@ function buildDefaultWardrobe(): WardrobeElement[] {
     color: ELEMENT_DEFAULT_COLOR.drzwi,
     quantity: 1,
   });
-
   // Drzwi prawe
-  push({
+  els.push({
     type: "drzwi",
     name: "Drzwi prawe",
     width: W / 2 - 3,
@@ -195,27 +185,8 @@ function buildDefaultWardrobe(): WardrobeElement[] {
   return els;
 }
 
-function buildDefaultProject(roomId: string, name = "Nowa szafa"): Project {
-  return {
-    id: uid(),
-    roomId,
-    name,
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
-    elements: buildDefaultWardrobe(),
-    outerWidth: 1000,
-    outerHeight: 2200,
-    outerDepth: 600,
-    plinthType: "staly",
-    plinthHeight: 100,
-    plinthRecess: 30,
-  };
-}
+// ===== Cokoły =====
 
-/**
- * Generuje listę elementów cokołu/nóżek dla zadanego typu cokołu.
- * Zwraca elementy gotowe do wstawienia (bez id).
- */
 function buildPlinthElements(
   type: PlinthType,
   outerWidth: number,
@@ -366,17 +337,64 @@ function buildPlinthElements(
   return els;
 }
 
-function buildEmptyProject(roomId: string, name = "Nowy projekt"): Project {
+// ===== Buildery =====
+
+function buildDefaultCabinet(name = "Szafa"): Cabinet {
+  return {
+    id: uid(),
+    name,
+    offsetX: 0,
+    offsetY: 0,
+    offsetZ: 0,
+    outerWidth: 1000,
+    outerHeight: 2200,
+    outerDepth: 600,
+    plinthType: "staly",
+    plinthHeight: 100,
+    plinthRecess: 30,
+    elements: buildDefaultWardrobeElements(1000, 2200, 600).map((e) => ({
+      id: uid(),
+      ...e,
+    })),
+  };
+}
+
+function buildEmptyCabinet(name = "Pusty moduł"): Cabinet {
+  return {
+    id: uid(),
+    name,
+    offsetX: 0,
+    offsetY: 0,
+    offsetZ: 0,
+    outerWidth: 600,
+    outerHeight: 2200,
+    outerDepth: 600,
+    plinthType: "staly",
+    plinthHeight: 100,
+    plinthRecess: 30,
+    elements: [],
+  };
+}
+
+function buildDefaultProject(roomId: string, name = "Nowa zabudowa"): Project {
   return {
     id: uid(),
     roomId,
     name,
     createdAt: Date.now(),
     updatedAt: Date.now(),
-    elements: [],
-    outerWidth: 1000,
-    outerHeight: 2200,
-    outerDepth: 600,
+    cabinets: [buildDefaultCabinet("Szafa 1")],
+  };
+}
+
+function buildEmptyProject(roomId: string, name = "Nowa zabudowa"): Project {
+  return {
+    id: uid(),
+    roomId,
+    name,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    cabinets: [buildEmptyCabinet("Moduł 1")],
   };
 }
 
@@ -388,37 +406,91 @@ function buildDefaultRoom(name = "Mieszkanie"): Room {
   };
 }
 
+// ===== Pomocnicze =====
+
+function touch(p: Project): Project {
+  return { ...p, updatedAt: Date.now() };
+}
+
+/** Oblicza nowe X dla nowej szafy "dostawionej" obok najbardziej wysuniętej. */
+function nextOffsetForNewCabinet(
+  cabinets: Cabinet[],
+  newWidth: number
+): number {
+  if (cabinets.length === 0) return 0;
+  const maxRight = Math.max(
+    ...cabinets.map((c) => c.offsetX + c.outerWidth / 2)
+  );
+  return maxRight + newWidth / 2;
+}
+
 interface AppState {
   rooms: Room[];
   projects: Project[];
   activeRoomId: string;
   activeId: string;
+  /** ID aktywnej szafy/modułu wewnątrz aktywnego projektu. */
+  activeCabinetId: string;
   selectedElementId: string | null;
+
+  // Pokoje
   setActive: (id: string) => void;
   setSelected: (id: string | null) => void;
   setActiveRoom: (roomId: string) => void;
   addRoom: (name?: string) => void;
   renameRoom: (id: string, name: string) => void;
   deleteRoom: (id: string) => void;
+
+  // Projekty
   newProject: (opts?: { empty?: boolean; name?: string }) => void;
   duplicateProject: () => void;
   deleteProject: (id: string) => void;
   renameProject: (id: string, name: string) => void;
   moveProjectToRoom: (projectId: string, roomId: string) => void;
-  setOuter: (w: number, h: number, d: number) => void;
-  scaleProject: (w: number, h: number, d: number) => void;
+
+  // Szafy / moduły
+  setActiveCabinet: (id: string) => void;
+  addCabinet: (opts?: { empty?: boolean; name?: string }) => void;
+  duplicateCabinet: (id?: string) => void;
+  deleteCabinet: (id: string) => void;
+  renameCabinet: (id: string, name: string) => void;
+  setCabinetOffset: (id: string, x: number, y: number, z: number) => void;
+  /** Ustawia wymiary szafy bez skalowania elementów (tylko podgląd kamery). */
+  setCabinetOuter: (id: string, w: number, h: number, d: number) => void;
+  /** Skaluje aktywną szafę: rozciąga elementy konstrukcyjne. */
+  scaleActiveCabinet: (w: number, h: number, d: number) => void;
+  /** Wymienia elementy cokołu/nóżek aktywnej szafy. */
   applyPlinth: (type: PlinthType, height: number, recess?: number) => void;
+
+  // Elementy (operują na aktywnej szafie)
   addElement: (type: ElementType) => void;
   duplicateElement: (id: string) => void;
   removeElement: (id: string) => void;
   updateElement: (id: string, patch: Partial<WardrobeElement>) => void;
   toggleHidden: (id: string) => void;
   showAll: () => void;
-  resetActive: () => void;
+  resetActiveCabinet: () => void;
 }
 
-function touch(p: Project): Project {
-  return { ...p, updatedAt: Date.now() };
+/**
+ * Aktualizuje aktywną szafę w aktywnym projekcie.
+ * Zwraca patch dla `set` z zaktualizowaną tablicą `projects`.
+ */
+function patchActiveCabinet(
+  state: AppState,
+  mutator: (cab: Cabinet) => Cabinet
+): Partial<AppState> {
+  return {
+    projects: state.projects.map((p) => {
+      if (p.id !== state.activeId) return p;
+      return touch({
+        ...p,
+        cabinets: p.cabinets.map((c) =>
+          c.id === state.activeCabinetId ? mutator(c) : c
+        ),
+      });
+    }),
+  };
 }
 
 export const useStore = create<AppState>()(
@@ -431,7 +503,9 @@ export const useStore = create<AppState>()(
         projects: [initialProject],
         activeRoomId: initialRoom.id,
         activeId: initialProject.id,
+        activeCabinetId: initialProject.cabinets[0].id,
         selectedElementId: null,
+
         setActive: (id) =>
           set((s) => {
             const proj = s.projects.find((p) => p.id === id);
@@ -439,32 +513,50 @@ export const useStore = create<AppState>()(
             return {
               activeId: id,
               activeRoomId: proj.roomId,
+              activeCabinetId:
+                proj.cabinets[0]?.id ?? s.activeCabinetId,
               selectedElementId: null,
             };
           }),
-        setSelected: (id) => set({ selectedElementId: id }),
+        setSelected: (id) => {
+          // Jeśli zaznaczamy element z innej szafy, przełączamy też aktywną
+          // szafę żeby edytor pokazał właściwy moduł.
+          set((s) => {
+            if (!id) return { selectedElementId: null };
+            const proj = s.projects.find((p) => p.id === s.activeId);
+            if (!proj) return { selectedElementId: id };
+            const cab = proj.cabinets.find((c) =>
+              c.elements.some((e) => e.id === id)
+            );
+            return {
+              selectedElementId: id,
+              activeCabinetId: cab?.id ?? s.activeCabinetId,
+            };
+          });
+        },
         setActiveRoom: (roomId) =>
           set((s) => {
             const room = s.rooms.find((r) => r.id === roomId);
             if (!room) return {};
-            // Wybieramy pierwszy projekt z tego pokoju (lub bieżący, gdy
-            // pokój jest pusty – wtedy 3D pokaże komunikat).
             const inRoom = s.projects.filter((p) => p.roomId === roomId);
+            const nextProj = inRoom[0];
             return {
               activeRoomId: roomId,
-              activeId: inRoom[0]?.id ?? s.activeId,
+              activeId: nextProj?.id ?? s.activeId,
+              activeCabinetId:
+                nextProj?.cabinets[0]?.id ?? s.activeCabinetId,
               selectedElementId: null,
             };
           }),
         addRoom: (name) => {
           const room = buildDefaultRoom(name || "Nowy pokój");
-          // Każdy pokój dostaje pusty placeholder, żeby UI miał co zaznaczyć.
           const proj = buildEmptyProject(room.id, "Nowa zabudowa");
           set((s) => ({
             rooms: [...s.rooms, room],
             projects: [...s.projects, proj],
             activeRoomId: room.id,
             activeId: proj.id,
+            activeCabinetId: proj.cabinets[0].id,
             selectedElementId: null,
           }));
         },
@@ -476,8 +568,6 @@ export const useStore = create<AppState>()(
         deleteRoom: (id) => {
           set((s) => {
             const remainingRooms = s.rooms.filter((r) => r.id !== id);
-            // Jeśli usuwamy ostatni pokój, tworzymy nowy domyślny żeby app
-            // zawsze miała co pokazać.
             if (remainingRooms.length === 0) {
               const fresh = buildDefaultRoom();
               const freshProj = buildDefaultProject(fresh.id);
@@ -486,6 +576,7 @@ export const useStore = create<AppState>()(
                 projects: [freshProj],
                 activeRoomId: fresh.id,
                 activeId: freshProj.id,
+                activeCabinetId: freshProj.cabinets[0].id,
                 selectedElementId: null,
               };
             }
@@ -503,10 +594,13 @@ export const useStore = create<AppState>()(
               projects: remainingProjects,
               activeRoomId: nextRoom.id,
               activeId: nextProj?.id ?? s.activeId,
+              activeCabinetId:
+                nextProj?.cabinets[0]?.id ?? s.activeCabinetId,
               selectedElementId: null,
             };
           });
         },
+
         newProject: (opts) => {
           set((s) => {
             const roomId = s.activeRoomId || s.rooms[0]?.id;
@@ -518,6 +612,7 @@ export const useStore = create<AppState>()(
               projects: [...s.projects, p],
               activeId: p.id,
               activeRoomId: roomId,
+              activeCabinetId: p.cabinets[0].id,
               selectedElementId: null,
             };
           });
@@ -532,12 +627,17 @@ export const useStore = create<AppState>()(
             name: src.name + " (kopia)",
             createdAt: Date.now(),
             updatedAt: Date.now(),
-            elements: src.elements.map((e) => ({ ...e, id: uid() })),
+            cabinets: src.cabinets.map((c) => ({
+              ...c,
+              id: uid(),
+              elements: c.elements.map((e) => ({ ...e, id: uid() })),
+            })),
           };
           set((s) => ({
             projects: [...s.projects, copy],
             activeId: copy.id,
             activeRoomId: copy.roomId,
+            activeCabinetId: copy.cabinets[0].id,
             selectedElementId: null,
           }));
         },
@@ -546,8 +646,6 @@ export const useStore = create<AppState>()(
             const removed = s.projects.find((p) => p.id === id);
             const remaining = s.projects.filter((p) => p.id !== id);
             const roomId = removed?.roomId ?? s.activeRoomId;
-            // Jeśli właśnie usunęliśmy ostatni projekt w tym pokoju,
-            // tworzymy w nim nowy domyślny, żeby pokój nie był martwy.
             const stillInRoom = remaining.filter((p) => p.roomId === roomId);
             const next =
               stillInRoom.length > 0
@@ -559,6 +657,7 @@ export const useStore = create<AppState>()(
               projects: next,
               activeId: nextActive.id,
               activeRoomId: nextActive.roomId,
+              activeCabinetId: nextActive.cabinets[0].id,
               selectedElementId: null,
             };
           });
@@ -579,56 +678,135 @@ export const useStore = create<AppState>()(
             ),
           }));
         },
-        setOuter: (w, h, d) => {
+
+        // ===== Szafy / moduły =====
+
+        setActiveCabinet: (id) =>
+          set({ activeCabinetId: id, selectedElementId: null }),
+
+        addCabinet: (opts) => {
+          set((s) => {
+            const proj = s.projects.find((p) => p.id === s.activeId);
+            if (!proj) return {};
+            const newCab = opts?.empty
+              ? buildEmptyCabinet(opts.name || `Moduł ${proj.cabinets.length + 1}`)
+              : buildDefaultCabinet(
+                  opts?.name || `Szafa ${proj.cabinets.length + 1}`
+                );
+            // Dostawiamy obok ostatniej szafy.
+            newCab.offsetX = nextOffsetForNewCabinet(
+              proj.cabinets,
+              newCab.outerWidth
+            );
+            return {
+              projects: s.projects.map((p) =>
+                p.id === s.activeId
+                  ? touch({ ...p, cabinets: [...p.cabinets, newCab] })
+                  : p
+              ),
+              activeCabinetId: newCab.id,
+              selectedElementId: null,
+            };
+          });
+        },
+        duplicateCabinet: (id) => {
+          set((s) => {
+            const proj = s.projects.find((p) => p.id === s.activeId);
+            if (!proj) return {};
+            const sourceId = id ?? s.activeCabinetId;
+            const src = proj.cabinets.find((c) => c.id === sourceId);
+            if (!src) return {};
+            const copy: Cabinet = {
+              ...src,
+              id: uid(),
+              name: src.name + " (kopia)",
+              offsetX: nextOffsetForNewCabinet(proj.cabinets, src.outerWidth),
+              elements: src.elements.map((e) => ({ ...e, id: uid() })),
+            };
+            return {
+              projects: s.projects.map((p) =>
+                p.id === s.activeId
+                  ? touch({ ...p, cabinets: [...p.cabinets, copy] })
+                  : p
+              ),
+              activeCabinetId: copy.id,
+              selectedElementId: null,
+            };
+          });
+        },
+        deleteCabinet: (id) => {
+          set((s) => {
+            const proj = s.projects.find((p) => p.id === s.activeId);
+            if (!proj) return {};
+            const remaining = proj.cabinets.filter((c) => c.id !== id);
+            const next =
+              remaining.length > 0 ? remaining : [buildEmptyCabinet("Moduł 1")];
+            const newActive = next.find((c) => c.id === s.activeCabinetId)
+              ? s.activeCabinetId
+              : next[0].id;
+            return {
+              projects: s.projects.map((p) =>
+                p.id === s.activeId ? touch({ ...p, cabinets: next }) : p
+              ),
+              activeCabinetId: newActive,
+              selectedElementId: null,
+            };
+          });
+        },
+        renameCabinet: (id, name) => {
           set((s) => ({
             projects: s.projects.map((p) =>
               p.id === s.activeId
-                ? touch({ ...p, outerWidth: w, outerHeight: h, outerDepth: d })
+                ? touch({
+                    ...p,
+                    cabinets: p.cabinets.map((c) =>
+                      c.id === id ? { ...c, name } : c
+                    ),
+                  })
                 : p
             ),
           }));
         },
-        applyPlinth: (type, height, recess) => {
+        setCabinetOffset: (id, x, y, z) => {
           set((s) => ({
-            projects: s.projects.map((p) => {
-              if (p.id !== s.activeId) return p;
-              const oldHeight = p.plinthHeight ?? 100;
-              const dy = height - oldHeight;
-              // Wszystko, co nie jest cokołem ani nóżką, to korpus szafy.
-              // Jeśli zmieniamy wysokość cokołu, podnosimy / opuszczamy korpus
-              // o tę samą wartość, żeby siadał na nowym cokole.
-              const carcass = p.elements
-                .filter((e) => e.type !== "cokol" && e.type !== "nozka")
-                .map((e) => (dy ? { ...e, y: e.y + dy } : e));
-              const plinth = buildPlinthElements(
-                type,
-                p.outerWidth,
-                p.outerDepth,
-                Math.max(0, height),
-                Math.max(0, recess ?? p.plinthRecess ?? 30)
-              ).map((e) => ({ id: uid(), ...e }));
-              return touch({
-                ...p,
-                elements: [...carcass, ...plinth],
-                plinthType: type,
-                plinthHeight: height,
-                plinthRecess: recess ?? p.plinthRecess ?? 30,
-              });
-            }),
+            projects: s.projects.map((p) =>
+              p.id === s.activeId
+                ? touch({
+                    ...p,
+                    cabinets: p.cabinets.map((c) =>
+                      c.id === id
+                        ? { ...c, offsetX: x, offsetY: y, offsetZ: z }
+                        : c
+                    ),
+                  })
+                : p
+            ),
           }));
         },
-        scaleProject: (newW, newH, newD) => {
+        setCabinetOuter: (id, w, h, d) => {
           set((s) => ({
-            projects: s.projects.map((p) => {
-              if (p.id !== s.activeId) return p;
-              const rx = newW / Math.max(1, p.outerWidth);
-              const ry = newH / Math.max(1, p.outerHeight);
-              const rz = newD / Math.max(1, p.outerDepth);
+            projects: s.projects.map((p) =>
+              p.id === s.activeId
+                ? touch({
+                    ...p,
+                    cabinets: p.cabinets.map((c) =>
+                      c.id === id
+                        ? { ...c, outerWidth: w, outerHeight: h, outerDepth: d }
+                        : c
+                    ),
+                  })
+                : p
+            ),
+          }));
+        },
+        scaleActiveCabinet: (newW, newH, newD) => {
+          set((s) =>
+            patchActiveCabinet(s, (c) => {
+              const rx = newW / Math.max(1, c.outerWidth);
+              const ry = newH / Math.max(1, c.outerHeight);
+              const rz = newD / Math.max(1, c.outerDepth);
               const round = (v: number) => Math.round(v * 10) / 10;
-              const elements = p.elements.map((el) => {
-                // Wymiar skalujemy tylko, jeśli jest "konstrukcyjny" (znacznie
-                // większy od grubości materiału). Dzięki temu półki i wieńce
-                // zostają 18 mm, a boki / drzwi rozciągają się z szafą.
+              const elements = c.elements.map((el) => {
                 const t = Math.max(1, el.thickness);
                 const stretchX = el.width > t * 4;
                 const stretchY = el.height > t * 4;
@@ -643,16 +821,44 @@ export const useStore = create<AppState>()(
                   z: round(el.z * rz),
                 };
               });
-              return touch({
-                ...p,
+              return {
+                ...c,
                 outerWidth: newW,
                 outerHeight: newH,
                 outerDepth: newD,
                 elements,
-              });
-            }),
-          }));
+              };
+            })
+          );
         },
+        applyPlinth: (type, height, recess) => {
+          set((s) =>
+            patchActiveCabinet(s, (c) => {
+              const oldHeight = c.plinthHeight ?? 100;
+              const dy = height - oldHeight;
+              const carcass = c.elements
+                .filter((e) => e.type !== "cokol" && e.type !== "nozka")
+                .map((e) => (dy ? { ...e, y: e.y + dy } : e));
+              const plinth = buildPlinthElements(
+                type,
+                c.outerWidth,
+                c.outerDepth,
+                Math.max(0, height),
+                Math.max(0, recess ?? c.plinthRecess ?? 30)
+              ).map((e) => ({ id: uid(), ...e }));
+              return {
+                ...c,
+                elements: [...carcass, ...plinth],
+                plinthType: type,
+                plinthHeight: height,
+                plinthRecess: recess ?? c.plinthRecess ?? 30,
+              };
+            })
+          );
+        },
+
+        // ===== Elementy =====
+
         addElement: (type) => {
           const id = uid();
           const newEl: WardrobeElement = {
@@ -665,17 +871,19 @@ export const useStore = create<AppState>()(
                 ? ELEMENT_DEFAULT_THICKNESS[type]
                 : type === "drazek"
                   ? 25
-                  : 800,
+                  : type === "nozka"
+                    ? 100
+                    : 800,
             depth:
               type === "bok" || type === "drzwi" || type === "front-szuflady"
                 ? ELEMENT_DEFAULT_THICKNESS[type]
                 : type === "plecy"
                   ? 3
-                  : type === "drazek"
-                    ? 25
+                  : type === "drazek" || type === "nozka"
+                    ? 50
                     : 580,
             x: 0,
-            y: 500,
+            y: type === "nozka" ? 50 : 500,
             z: 0,
             thickness: ELEMENT_DEFAULT_THICKNESS[type],
             material:
@@ -683,131 +891,160 @@ export const useStore = create<AppState>()(
                 ? "HDF 3 mm"
                 : type === "drazek"
                   ? "Rurka metalowa Ø25"
-                  : "Płyta meblowa 18 mm",
+                  : type === "nozka"
+                    ? "Nóżka regulowana ABS / metal"
+                    : "Płyta meblowa 18 mm",
             color: ELEMENT_DEFAULT_COLOR[type],
             quantity: 1,
           };
-          set((s) => ({
-            projects: s.projects.map((p) =>
-              p.id === s.activeId
-                ? touch({ ...p, elements: [...p.elements, newEl] })
-                : p
-            ),
-            selectedElementId: id,
-          }));
+          set((s) =>
+            patchActiveCabinet(s, (c) => ({
+              ...c,
+              elements: [...c.elements, newEl],
+            }))
+          );
+          set({ selectedElementId: id });
         },
         duplicateElement: (id) => {
-          set((s) => ({
-            projects: s.projects.map((p) => {
-              if (p.id !== s.activeId) return p;
-              const src = p.elements.find((e) => e.id === id);
-              if (!src) return p;
+          set((s) =>
+            patchActiveCabinet(s, (c) => {
+              const src = c.elements.find((e) => e.id === id);
+              if (!src) return c;
               const copy: WardrobeElement = {
                 ...src,
                 id: uid(),
                 name: src.name + " (kopia)",
                 x: src.x + 50,
               };
-              return touch({ ...p, elements: [...p.elements, copy] });
-            }),
-          }));
+              return { ...c, elements: [...c.elements, copy] };
+            })
+          );
         },
         removeElement: (id) => {
           set((s) => ({
-            projects: s.projects.map((p) =>
-              p.id === s.activeId
-                ? touch({
-                    ...p,
-                    elements: p.elements.filter((e) => e.id !== id),
-                  })
-                : p
-            ),
+            ...patchActiveCabinet(s, (c) => ({
+              ...c,
+              elements: c.elements.filter((e) => e.id !== id),
+            })),
             selectedElementId:
               s.selectedElementId === id ? null : s.selectedElementId,
           }));
         },
         updateElement: (id, patch) => {
-          set((s) => ({
-            projects: s.projects.map((p) =>
-              p.id === s.activeId
-                ? touch({
-                    ...p,
-                    elements: p.elements.map((e) =>
-                      e.id === id ? { ...e, ...patch } : e
-                    ),
-                  })
-                : p
-            ),
-          }));
+          set((s) =>
+            patchActiveCabinet(s, (c) => ({
+              ...c,
+              elements: c.elements.map((e) =>
+                e.id === id ? { ...e, ...patch } : e
+              ),
+            }))
+          );
         },
         toggleHidden: (id) => {
-          set((s) => ({
-            projects: s.projects.map((p) =>
-              p.id === s.activeId
-                ? touch({
-                    ...p,
-                    elements: p.elements.map((e) =>
-                      e.id === id ? { ...e, hidden: !e.hidden } : e
-                    ),
-                  })
-                : p
-            ),
-          }));
+          set((s) =>
+            patchActiveCabinet(s, (c) => ({
+              ...c,
+              elements: c.elements.map((e) =>
+                e.id === id ? { ...e, hidden: !e.hidden } : e
+              ),
+            }))
+          );
         },
         showAll: () => {
-          set((s) => ({
-            projects: s.projects.map((p) =>
-              p.id === s.activeId
-                ? touch({
-                    ...p,
-                    elements: p.elements.map((e) => ({ ...e, hidden: false })),
-                  })
-                : p
-            ),
-          }));
+          set((s) =>
+            patchActiveCabinet(s, (c) => ({
+              ...c,
+              elements: c.elements.map((e) => ({ ...e, hidden: false })),
+            }))
+          );
         },
-        resetActive: () => {
-          set((s) => ({
-            projects: s.projects.map((p) =>
-              p.id === s.activeId
-                ? touch({ ...p, elements: buildDefaultWardrobe() })
-                : p
-            ),
-            selectedElementId: null,
-          }));
+        resetActiveCabinet: () => {
+          set((s) =>
+            patchActiveCabinet(s, (c) => ({
+              ...c,
+              elements: buildDefaultWardrobeElements(
+                c.outerWidth,
+                c.outerHeight,
+                c.outerDepth
+              ).map((e) => ({ id: uid(), ...e })),
+            }))
+          );
+          set({ selectedElementId: null });
         },
       };
     },
     {
       name: "meble3d-store-v1",
-      version: 2,
+      version: 3,
       migrate: (persistedState: any, fromVersion: number) => {
         if (!persistedState) return persistedState;
+        let state = persistedState;
+
+        // v1 -> v2: dodaj pokoje
         if (fromVersion < 2) {
-          // Stara wersja: tylko `projects[]` bez pokoi. Tworzymy domyślny
-          // pokój i przypisujemy do niego wszystkie istniejące projekty.
           const defaultRoom = buildDefaultRoom("Mieszkanie");
-          const projects: Project[] = (persistedState.projects ?? []).map(
-            (p: any) => ({
-              ...p,
-              roomId: defaultRoom.id,
-            })
-          );
-          return {
-            ...persistedState,
+          const projects = (state.projects ?? []).map((p: any) => ({
+            ...p,
+            roomId: defaultRoom.id,
+          }));
+          state = {
+            ...state,
             rooms: [defaultRoom],
             activeRoomId: defaultRoom.id,
             projects: projects.length
               ? projects
               : [buildDefaultProject(defaultRoom.id)],
-            activeId: projects[0]?.id ?? persistedState.activeId,
+            activeId: projects[0]?.id ?? state.activeId,
           };
         }
-        return persistedState;
+        // v2 -> v3: zawiń elementy projektu w pierwszą szafę (Cabinet)
+        if (fromVersion < 3) {
+          const projects = (state.projects ?? []).map((p: any) => {
+            if (Array.isArray(p.cabinets) && p.cabinets.length > 0) return p;
+            const cabinet: Cabinet = {
+              id: uid(),
+              name: "Szafa 1",
+              offsetX: 0,
+              offsetY: 0,
+              offsetZ: 0,
+              outerWidth: p.outerWidth ?? 1000,
+              outerHeight: p.outerHeight ?? 2200,
+              outerDepth: p.outerDepth ?? 600,
+              plinthType: p.plinthType ?? "staly",
+              plinthHeight: p.plinthHeight ?? 100,
+              plinthRecess: p.plinthRecess ?? 30,
+              elements: p.elements ?? [],
+            };
+            const {
+              elements: _e,
+              outerWidth: _w,
+              outerHeight: _h,
+              outerDepth: _d,
+              plinthType: _pt,
+              plinthHeight: _ph,
+              plinthRecess: _pr,
+              ...rest
+            } = p;
+            return { ...rest, cabinets: [cabinet] };
+          });
+          const activeProj = projects.find(
+            (p: Project) => p.id === state.activeId
+          );
+          state = {
+            ...state,
+            projects,
+            activeCabinetId:
+              activeProj?.cabinets?.[0]?.id ??
+              projects[0]?.cabinets?.[0]?.id,
+          };
+        }
+        return state;
       },
     }
   )
 );
+
+// ===== Hooki =====
 
 export function useActiveProject(): Project {
   const { projects, activeId } = useStore();
@@ -822,4 +1059,13 @@ export function useActiveRoom(): Room {
 export function useProjectsInActiveRoom(): Project[] {
   const { projects, activeRoomId } = useStore();
   return projects.filter((p) => p.roomId === activeRoomId);
+}
+
+export function useActiveCabinet(): Cabinet {
+  const project = useActiveProject();
+  const activeCabinetId = useStore((s) => s.activeCabinetId);
+  return (
+    project.cabinets.find((c) => c.id === activeCabinetId) ??
+    project.cabinets[0]
+  );
 }

@@ -3,6 +3,7 @@ import {
   useStore,
   useActiveProject,
   useActiveRoom,
+  useActiveCabinet,
   useProjectsInActiveRoom,
 } from "../store";
 import {
@@ -25,6 +26,7 @@ export function ProjectPanel() {
     projects,
     activeId,
     activeRoomId,
+    activeCabinetId,
     setActive,
     setActiveRoom,
     addRoom,
@@ -35,52 +37,95 @@ export function ProjectPanel() {
     duplicateProject,
     deleteProject,
     renameProject,
-    setOuter,
-    scaleProject,
+    setActiveCabinet,
+    addCabinet,
+    duplicateCabinet,
+    deleteCabinet,
+    renameCabinet,
+    setCabinetOffset,
+    setCabinetOuter,
+    scaleActiveCabinet,
     applyPlinth,
-    resetActive,
+    resetActiveCabinet,
   } = useStore();
   const project = useActiveProject();
   const room = useActiveRoom();
   const projectsInRoom = useProjectsInActiveRoom();
+  const cabinet = useActiveCabinet();
 
-  const [scaleW, setScaleW] = useState<string>(String(project.outerWidth));
-  const [scaleH, setScaleH] = useState<string>(String(project.outerHeight));
-  const [scaleD, setScaleD] = useState<string>(String(project.outerDepth));
-
+  // Lokalny state dla edytowalnych pól, żeby user mógł wpisać wartość
+  // bez natychmiastowego zatwierdzenia (mniej rerenderów / mniej skoków).
+  const [scaleW, setScaleW] = useState<string>(String(cabinet.outerWidth));
+  const [scaleH, setScaleH] = useState<string>(String(cabinet.outerHeight));
+  const [scaleD, setScaleD] = useState<string>(String(cabinet.outerDepth));
   const [plinthType, setPlinthType] = useState<PlinthType>(
-    project.plinthType ?? "staly"
+    cabinet.plinthType ?? "staly"
   );
   const [plinthHeight, setPlinthHeight] = useState<string>(
-    String(project.plinthHeight ?? 100)
+    String(cabinet.plinthHeight ?? 100)
   );
   const [plinthRecess, setPlinthRecess] = useState<string>(
-    String(project.plinthRecess ?? 30)
+    String(cabinet.plinthRecess ?? 30)
   );
 
   useEffect(() => {
-    setScaleW(String(project.outerWidth));
-    setScaleH(String(project.outerHeight));
-    setScaleD(String(project.outerDepth));
-    setPlinthType(project.plinthType ?? "staly");
-    setPlinthHeight(String(project.plinthHeight ?? 100));
-    setPlinthRecess(String(project.plinthRecess ?? 30));
+    setScaleW(String(cabinet.outerWidth));
+    setScaleH(String(cabinet.outerHeight));
+    setScaleD(String(cabinet.outerDepth));
+    setPlinthType(cabinet.plinthType ?? "staly");
+    setPlinthHeight(String(cabinet.plinthHeight ?? 100));
+    setPlinthRecess(String(cabinet.plinthRecess ?? 30));
   }, [
-    project.id,
-    project.outerWidth,
-    project.outerHeight,
-    project.outerDepth,
-    project.plinthType,
-    project.plinthHeight,
-    project.plinthRecess,
+    cabinet.id,
+    cabinet.outerWidth,
+    cabinet.outerHeight,
+    cabinet.outerDepth,
+    cabinet.plinthType,
+    cabinet.plinthHeight,
+    cabinet.plinthRecess,
   ]);
+
+  const applyScale = () => {
+    const w = Math.max(100, parseFloat(scaleW) || cabinet.outerWidth);
+    const h = Math.max(100, parseFloat(scaleH) || cabinet.outerHeight);
+    const d = Math.max(100, parseFloat(scaleD) || cabinet.outerDepth);
+    if (
+      w === cabinet.outerWidth &&
+      h === cabinet.outerHeight &&
+      d === cabinet.outerDepth
+    )
+      return;
+    if (
+      confirm(
+        "Przeskalować szafę „" +
+          cabinet.name +
+          "” z " +
+          cabinet.outerWidth +
+          " × " +
+          cabinet.outerHeight +
+          " × " +
+          cabinet.outerDepth +
+          " mm na " +
+          w +
+          " × " +
+          h +
+          " × " +
+          d +
+          " mm?\n\nWymiary konstrukcyjne (boki, plecy, drzwi) zostaną rozciągnięte. Półki, wieńce i drążki zachowają swoją grubość."
+      )
+    ) {
+      scaleActiveCabinet(w, h, d);
+    }
+  };
 
   const handleApplyPlinth = () => {
     const h = Math.max(0, parseFloat(plinthHeight) || 0);
     const r = Math.max(0, parseFloat(plinthRecess) || 0);
     if (
       confirm(
-        "Wymienić elementy cokołu na: „" +
+        "Wymienić cokół w szafie „" +
+          cabinet.name +
+          "” na: „" +
           PLINTH_LABELS[plinthType] +
           "” (wys. " +
           h +
@@ -88,37 +133,6 @@ export function ProjectPanel() {
       )
     ) {
       applyPlinth(plinthType, h, r);
-    }
-  };
-
-  const applyScale = () => {
-    const w = Math.max(100, parseFloat(scaleW) || project.outerWidth);
-    const h = Math.max(100, parseFloat(scaleH) || project.outerHeight);
-    const d = Math.max(100, parseFloat(scaleD) || project.outerDepth);
-    if (
-      w === project.outerWidth &&
-      h === project.outerHeight &&
-      d === project.outerDepth
-    )
-      return;
-    if (
-      confirm(
-        "Przeskalować szafę z " +
-          project.outerWidth +
-          " × " +
-          project.outerHeight +
-          " × " +
-          project.outerDepth +
-          " mm na " +
-          w +
-          " × " +
-          h +
-          " × " +
-          d +
-          " mm?\n\nWymiary konstrukcyjne (boki, plecy, drzwi) zostaną rozciągnięte. Półki, wieńce i drążki zachowają swoją grubość, ale ich pozycje zostaną przeliczone."
-      )
-    ) {
-      scaleProject(w, h, d);
     }
   };
 
@@ -143,8 +157,32 @@ export function ProjectPanel() {
     }
   };
 
+  const handleAddCabinet = (empty: boolean) => {
+    const defaultName = empty
+      ? "Moduł " + (project.cabinets.length + 1)
+      : "Szafa " + (project.cabinets.length + 1);
+    const name = prompt("Nazwa nowej szafy / modułu:", defaultName);
+    if (name === null) return;
+    addCabinet({ empty, name: name.trim() || defaultName });
+  };
+
+  const handleDeleteCabinet = () => {
+    if (project.cabinets.length === 1) {
+      alert("Nie można usunąć ostatniej szafy w projekcie.");
+      return;
+    }
+    if (
+      confirm(
+        "Usunąć szafę „" + cabinet.name + "” razem z jej elementami?"
+      )
+    ) {
+      deleteCabinet(cabinet.id);
+    }
+  };
+
   return (
     <div className="panel-content">
+      {/* ===== Pokój ===== */}
       <div className="form-section-title">Pokój</div>
       <div className="form">
         <div className="form-row">
@@ -195,8 +233,9 @@ export function ProjectPanel() {
         </div>
       </div>
 
+      {/* ===== Projekt ===== */}
       <div className="form-section-title">
-        Projekty w pokoju „{room.name}" ({projectsInRoom.length})
+        Projekt w pokoju „{room.name}" ({projectsInRoom.length})
       </div>
       <div className="form">
         <div className="form-row">
@@ -250,11 +289,7 @@ export function ProjectPanel() {
           </div>
         )}
         <div className="form-actions">
-          <button
-            className="btn primary"
-            onClick={() => newProject()}
-            title="Dodaj nowy projekt z szablonem domyślnej szafy"
-          >
+          <button className="btn primary" onClick={() => newProject()}>
             + Z szablonu
           </button>
           <button
@@ -262,7 +297,6 @@ export function ProjectPanel() {
             onClick={() =>
               newProject({ empty: true, name: "Nowa zabudowa" })
             }
-            title="Dodaj pusty projekt do samodzielnego zaprojektowania"
           >
             + Pusty
           </button>
@@ -286,33 +320,170 @@ export function ProjectPanel() {
         </div>
       </div>
 
+      {/* ===== Szafy / moduły ===== */}
+      <div className="form-section-title">
+        Szafy / moduły w projekcie ({project.cabinets.length})
+      </div>
+      <p className="hint">
+        Jeden projekt może składać się z kilku szaf ustawionych obok siebie
+        (np. sekcja z drzwiami + sekcja z pralką). Każda ma własne wymiary,
+        cokół i listę elementów. Lista dla stolarza zsumuje wszystkie.
+      </p>
+      <div className="form">
+        <div className="form-row">
+          <label className="field">
+            <span className="field-label">Aktywna szafa</span>
+            <span className="field-input">
+              <select
+                value={activeCabinetId}
+                onChange={(e) => setActiveCabinet(e.target.value)}
+              >
+                {project.cabinets.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </span>
+          </label>
+        </div>
+        <div className="form-row">
+          <label className="field">
+            <span className="field-label">Nazwa szafy</span>
+            <span className="field-input">
+              <input
+                type="text"
+                value={cabinet.name}
+                onChange={(e) => renameCabinet(cabinet.id, e.target.value)}
+              />
+            </span>
+          </label>
+        </div>
+        <div className="form-actions">
+          <button
+            className="btn primary"
+            onClick={() => handleAddCabinet(false)}
+            title="Dostaw nową szafę z domyślnym korpusem obok ostatniej"
+          >
+            + Dostaw szafę
+          </button>
+          <button
+            className="btn ghost"
+            onClick={() => handleAddCabinet(true)}
+            title="Dostaw pusty moduł obok ostatniej szafy"
+          >
+            + Pusty moduł
+          </button>
+          <button
+            className="btn ghost"
+            onClick={() => duplicateCabinet(cabinet.id)}
+          >
+            Duplikuj
+          </button>
+          <button
+            className="btn danger"
+            onClick={handleDeleteCabinet}
+            disabled={project.cabinets.length === 1}
+          >
+            Usuń szafę
+          </button>
+        </div>
+
+        <div className="form-section-title">Pozycja szafy w zabudowie</div>
+        <p className="hint">
+          Przesunięcie środka tej szafy względem środka projektu. Domyślnie
+          „+ Dostaw szafę” ustawia X tak, by szafa stanęła równo obok
+          poprzedniej.
+        </p>
+        <div className="form-row grid-3">
+          <label className="field">
+            <span className="field-label">Offset X [mm]</span>
+            <span className="field-input">
+              <input
+                type="number"
+                inputMode="numeric"
+                value={cabinet.offsetX}
+                onChange={(e) =>
+                  setCabinetOffset(
+                    cabinet.id,
+                    parseFloat(e.target.value) || 0,
+                    cabinet.offsetY,
+                    cabinet.offsetZ
+                  )
+                }
+              />
+            </span>
+          </label>
+          <label className="field">
+            <span className="field-label">Offset Y [mm]</span>
+            <span className="field-input">
+              <input
+                type="number"
+                inputMode="numeric"
+                value={cabinet.offsetY}
+                onChange={(e) =>
+                  setCabinetOffset(
+                    cabinet.id,
+                    cabinet.offsetX,
+                    parseFloat(e.target.value) || 0,
+                    cabinet.offsetZ
+                  )
+                }
+              />
+            </span>
+          </label>
+          <label className="field">
+            <span className="field-label">Offset Z [mm]</span>
+            <span className="field-input">
+              <input
+                type="number"
+                inputMode="numeric"
+                value={cabinet.offsetZ}
+                onChange={(e) =>
+                  setCabinetOffset(
+                    cabinet.id,
+                    cabinet.offsetX,
+                    cabinet.offsetY,
+                    parseFloat(e.target.value) || 0
+                  )
+                }
+              />
+            </span>
+          </label>
+        </div>
+      </div>
+
       <ul className="elist">
-        {projectsInRoom.map((p) => (
+        {project.cabinets.map((c) => (
           <li
-            key={p.id}
-            className={"elist-item" + (p.id === activeId ? " active" : "")}
-            onClick={() => setActive(p.id)}
+            key={c.id}
+            className={
+              "elist-item" + (c.id === activeCabinetId ? " active" : "")
+            }
+            onClick={() => setActiveCabinet(c.id)}
           >
             <span
               className="elist-color"
-              style={{ background: p.id === activeId ? "#3b82f6" : "#475569" }}
+              style={{
+                background: c.id === activeCabinetId ? "#3b82f6" : "#475569",
+              }}
             />
             <span className="elist-name">
-              <strong>{p.name}</strong>
+              <strong>{c.name}</strong>
               <small>
-                {p.elements.length} elementów ·{" "}
-                {new Date(p.updatedAt).toLocaleDateString("pl-PL")}
+                {c.outerWidth} × {c.outerHeight} × {c.outerDepth} mm ·{" "}
+                {c.elements.length} el.
               </small>
             </span>
           </li>
         ))}
       </ul>
 
-      <div className="form-section-title">Cokół</div>
+      {/* ===== Cokół (per szafa) ===== */}
+      <div className="form-section-title">Cokół w szafie „{cabinet.name}"</div>
       <p className="hint">
-        Wybierz typ cokołu – po zastosowaniu odpowiednie elementy zostaną
-        wygenerowane (cokół, maskownica, nóżki) i pojawią się w&nbsp;liście
-        elementów dla stolarza.
+        Każda szafa ma własny cokół. Zmiana tutaj dotyczy tylko aktywnej
+        szafy.
       </p>
       <div className="plinth-options">
         {PLINTH_TYPES.map((t) => (
@@ -367,22 +538,23 @@ export function ProjectPanel() {
           Zastosuj cokół
         </button>
       </div>
-      {project.plinthType && (
+      {cabinet.plinthType && (
         <p className="hint">
-          Aktualny cokół: <strong>{PLINTH_LABELS[project.plinthType]}</strong>{" "}
-          · wysokość {project.plinthHeight ?? 0} mm
-          {project.plinthType === "cofniety"
-            ? ", cofnięty o " + (project.plinthRecess ?? 0) + " mm"
+          Aktualny cokół tej szafy:{" "}
+          <strong>{PLINTH_LABELS[cabinet.plinthType]}</strong> · wysokość{" "}
+          {cabinet.plinthHeight ?? 0} mm
+          {cabinet.plinthType === "cofniety"
+            ? ", cofnięty o " + (cabinet.plinthRecess ?? 0) + " mm"
             : ""}
           .
         </p>
       )}
 
-      <div className="form-section-title">Skaluj projekt</div>
+      {/* ===== Skaluj aktywną szafę ===== */}
+      <div className="form-section-title">Skaluj szafę</div>
       <p className="hint">
-        Wpisz docelowe wymiary szafy w&nbsp;mm. Boki, plecy i drzwi zostaną
-        rozciągnięte do nowej wysokości / szerokości, a&nbsp;półki i wieńce
-        zachowają grubość 18 mm – tylko ich pozycje się przeliczą.
+        Wpisz docelowe wymiary aktywnej szafy w&nbsp;mm. Boki, plecy i
+        drzwi zostaną rozciągnięte; półki i wieńce zachowają grubość 18 mm.
       </p>
       <div className="form-row grid-3">
         <label className="field">
@@ -426,23 +598,25 @@ export function ProjectPanel() {
         <button
           className="btn ghost"
           onClick={() => {
-            setScaleW(String(project.outerWidth));
-            setScaleH(String(project.outerHeight));
-            setScaleD(String(project.outerDepth));
+            setScaleW(String(cabinet.outerWidth));
+            setScaleH(String(cabinet.outerHeight));
+            setScaleD(String(cabinet.outerDepth));
           }}
         >
           Cofnij wpis
         </button>
       </div>
       <p className="hint">
-        Aktualne gabaryty: {project.outerWidth} × {project.outerHeight} ×{" "}
-        {project.outerDepth} mm.
+        Aktualne gabaryty szafy: {cabinet.outerWidth} × {cabinet.outerHeight}{" "}
+        × {cabinet.outerDepth} mm.
       </p>
 
-      <div className="form-section-title">Gabaryty bez skalowania (tylko podgląd)</div>
+      <div className="form-section-title">
+        Gabaryty bez skalowania (tylko podgląd)
+      </div>
       <p className="hint">
-        Pozwala ręcznie zmienić wartości używane przez kamerę, bez ruszania
-        elementów. Użyj, jeśli sam ręcznie poprawiłeś elementy.
+        Pozwala ręcznie zmienić wartości używane przez kamerę i obwiednię
+        szafy, bez ruszania elementów.
       </p>
       <div className="form-row grid-3">
         <label className="field">
@@ -451,12 +625,13 @@ export function ProjectPanel() {
             <input
               type="number"
               inputMode="numeric"
-              value={project.outerWidth}
+              value={cabinet.outerWidth}
               onChange={(e) =>
-                setOuter(
+                setCabinetOuter(
+                  cabinet.id,
                   Math.max(100, parseFloat(e.target.value) || 0),
-                  project.outerHeight,
-                  project.outerDepth
+                  cabinet.outerHeight,
+                  cabinet.outerDepth
                 )
               }
             />
@@ -468,12 +643,13 @@ export function ProjectPanel() {
             <input
               type="number"
               inputMode="numeric"
-              value={project.outerHeight}
+              value={cabinet.outerHeight}
               onChange={(e) =>
-                setOuter(
-                  project.outerWidth,
+                setCabinetOuter(
+                  cabinet.id,
+                  cabinet.outerWidth,
                   Math.max(100, parseFloat(e.target.value) || 0),
-                  project.outerDepth
+                  cabinet.outerDepth
                 )
               }
             />
@@ -485,11 +661,12 @@ export function ProjectPanel() {
             <input
               type="number"
               inputMode="numeric"
-              value={project.outerDepth}
+              value={cabinet.outerDepth}
               onChange={(e) =>
-                setOuter(
-                  project.outerWidth,
-                  project.outerHeight,
+                setCabinetOuter(
+                  cabinet.id,
+                  cabinet.outerWidth,
+                  cabinet.outerHeight,
                   Math.max(100, parseFloat(e.target.value) || 0)
                 )
               }
@@ -505,10 +682,12 @@ export function ProjectPanel() {
           onClick={() => {
             if (
               confirm(
-                "Zastąpić obecne elementy domyślnym szablonem szafy 1000×2200×600?"
+                "Zastąpić elementy szafy „" +
+                  cabinet.name +
+                  "” domyślnym szablonem szafy 2-drzwiowej?"
               )
             ) {
-              resetActive();
+              resetActiveCabinet();
             }
           }}
         >

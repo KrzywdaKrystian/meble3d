@@ -2,7 +2,7 @@ import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Grid, Environment } from "@react-three/drei";
 import { Suspense, useEffect, useMemo } from "react";
 import { useActiveProject, useStore } from "../store";
-import { WardrobeElement } from "../types";
+import { Cabinet, WardrobeElement } from "../types";
 import * as THREE from "three";
 
 const MM = 0.001; // milimetry -> metry sceny
@@ -39,7 +39,9 @@ function ElementMesh({ el }: { el: WardrobeElement }) {
           color={el.color}
           roughness={el.type === "drazek" ? 0.3 : 0.75}
           metalness={el.type === "drazek" ? 0.8 : 0.05}
-          emissive={isSelected ? new THREE.Color("#3b82f6") : new THREE.Color("#000")}
+          emissive={
+            isSelected ? new THREE.Color("#3b82f6") : new THREE.Color("#000")
+          }
           emissiveIntensity={isSelected ? 0.3 : 0}
         />
       </mesh>
@@ -54,14 +56,86 @@ function ElementMesh({ el }: { el: WardrobeElement }) {
   );
 }
 
+function CabinetGroup({
+  cabinet,
+  active,
+}: {
+  cabinet: Cabinet;
+  active: boolean;
+}) {
+  return (
+    <group
+      position={[
+        cabinet.offsetX * MM,
+        cabinet.offsetY * MM,
+        cabinet.offsetZ * MM,
+      ]}
+    >
+      {/* Lekka „aureola” pod aktywną szafą żeby było widać którą edytujesz */}
+      {active && (
+        <mesh
+          position={[0, 0.001, 0]}
+          rotation={[-Math.PI / 2, 0, 0]}
+        >
+          <ringGeometry
+            args={[
+              (Math.max(cabinet.outerWidth, cabinet.outerDepth) * MM) / 2,
+              (Math.max(cabinet.outerWidth, cabinet.outerDepth) * MM) / 2 +
+                0.04,
+              48,
+            ]}
+          />
+          <meshBasicMaterial
+            color="#3b82f6"
+            transparent
+            opacity={0.6}
+            side={THREE.DoubleSide}
+          />
+        </mesh>
+      )}
+      {cabinet.elements
+        .filter((el) => !el.hidden)
+        .map((el) => (
+          <ElementMesh key={el.id} el={el} />
+        ))}
+    </group>
+  );
+}
+
 export function Wardrobe3D() {
   const project = useActiveProject();
+  const activeCabinetId = useStore((s) => s.activeCabinetId);
   const setSelected = useStore((s) => s.setSelected);
 
-  const center = useMemo(
-    () => [0, (project.outerHeight * MM) / 2, 0] as [number, number, number],
-    [project.outerHeight]
-  );
+  // Bryła otaczająca wszystkie szafy w projekcie – dla kamery i ustawienia podłogi.
+  const bounds = useMemo(() => {
+    if (project.cabinets.length === 0) {
+      return { centerX: 0, centerY: 1, maxSpan: 2 };
+    }
+    let minX = Infinity;
+    let maxX = -Infinity;
+    let maxH = 0;
+    let minZ = Infinity;
+    let maxZ = -Infinity;
+    for (const c of project.cabinets) {
+      minX = Math.min(minX, c.offsetX - c.outerWidth / 2);
+      maxX = Math.max(maxX, c.offsetX + c.outerWidth / 2);
+      maxH = Math.max(maxH, c.offsetY + c.outerHeight);
+      minZ = Math.min(minZ, c.offsetZ - c.outerDepth / 2);
+      maxZ = Math.max(maxZ, c.offsetZ + c.outerDepth / 2);
+    }
+    const centerX = (minX + maxX) / 2;
+    const centerY = maxH / 2;
+    const maxSpan = Math.max(maxX - minX, maxH, maxZ - minZ);
+    return { centerX, centerY, maxSpan };
+  }, [project]);
+
+  const target: [number, number, number] = [
+    bounds.centerX * MM,
+    bounds.centerY * MM,
+    0,
+  ];
+  const cameraDist = bounds.maxSpan * MM * 1.6;
 
   return (
     <Canvas
@@ -69,13 +143,13 @@ export function Wardrobe3D() {
       dpr={[1, 2]}
       camera={{
         position: [
-          project.outerWidth * MM * 1.4,
-          project.outerHeight * MM * 0.9,
-          project.outerDepth * MM * 3.2,
+          (bounds.centerX + bounds.maxSpan * 0.7) * MM,
+          (bounds.centerY + bounds.maxSpan * 0.6) * MM,
+          cameraDist + 1,
         ],
         fov: 35,
         near: 0.01,
-        far: 100,
+        far: 200,
       }}
       onPointerMissed={() => setSelected(null)}
     >
@@ -91,27 +165,26 @@ export function Wardrobe3D() {
 
       <Suspense fallback={null}>
         <Environment preset="apartment" />
-        <group>
-          {project.elements
-            .filter((el) => !el.hidden)
-            .map((el) => (
-              <ElementMesh key={el.id} el={el} />
-            ))}
-        </group>
+        {project.cabinets.map((cab) => (
+          <CabinetGroup
+            key={cab.id}
+            cabinet={cab}
+            active={cab.id === activeCabinetId}
+          />
+        ))}
       </Suspense>
 
-      {/* Podłoga */}
       <mesh
         rotation={[-Math.PI / 2, 0, 0]}
         position={[0, 0, 0]}
         receiveShadow
       >
-        <planeGeometry args={[20, 20]} />
+        <planeGeometry args={[40, 40]} />
         <meshStandardMaterial color="#2b3140" roughness={1} />
       </mesh>
 
       <Grid
-        args={[20, 20]}
+        args={[40, 40]}
         position={[0, 0.001, 0]}
         cellSize={0.1}
         cellThickness={0.5}
@@ -119,17 +192,17 @@ export function Wardrobe3D() {
         sectionSize={1}
         sectionThickness={1}
         sectionColor="#5b6478"
-        fadeDistance={12}
+        fadeDistance={20}
         fadeStrength={1}
         infiniteGrid
       />
 
       <OrbitControls
-        target={center}
+        target={target}
         enableDamping
         dampingFactor={0.08}
         minDistance={0.5}
-        maxDistance={15}
+        maxDistance={30}
         maxPolarAngle={Math.PI / 2 - 0.05}
       />
     </Canvas>
