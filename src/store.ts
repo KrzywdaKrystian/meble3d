@@ -570,7 +570,7 @@ export const useStore = create<AppState>()(
             };
           }),
         addRoom: (name) => {
-          const room = buildDefaultRoom(name || "Nowy pokój");
+          const room = buildDefaultRoom(name || "Nowa przestrzeń");
           const proj = buildEmptyProject(room.id, "Nowa zabudowa");
           set((s) => ({
             rooms: [...s.rooms, room],

@@ -56,7 +56,7 @@ export function RoomProjectPicker({
   if (!open) return null;
 
   const handleAddRoom = () => {
-    const name = prompt("Nazwa nowego pokoju (np. Sypialnia):", "");
+    const name = prompt("Nazwa nowej przestrzeni (np. Sypialnia):", "");
     if (name && name.trim()) {
       addRoom(name.trim());
     }
@@ -65,7 +65,7 @@ export function RoomProjectPicker({
   const handleDeleteRoom = () => {
     const inRoom = projects.filter((p) => p.roomId === room.id);
     const msg =
-      "Usunąć pokój „" +
+      "Usunąć przestrzeń „" +
       room.name +
       "”" +
       (inRoom.length > 0
@@ -81,7 +81,7 @@ export function RoomProjectPicker({
       className="picker-overlay"
       role="dialog"
       aria-modal="true"
-      aria-label="Wybór pokoju i projektu"
+      aria-label="Wybór przestrzeni i projektu"
     >
       <header className="picker-header">
         <button
@@ -99,33 +99,39 @@ export function RoomProjectPicker({
 
       <div className="picker-body">
         <div className="picker-room-select">
-          <label className="field">
-            <span className="field-label">Wybierz pokój</span>
-            <span className="field-input">
-              <select
-                value={activeRoomId}
-                onChange={(e) => setActiveRoom(e.target.value)}
-              >
-                {rooms.map((r) => {
-                  const count = projects.filter(
-                    (p) => p.roomId === r.id
-                  ).length;
-                  return (
-                    <option key={r.id} value={r.id}>
-                      {r.name} ({count} projektów)
-                    </option>
-                  );
-                })}
-              </select>
-            </span>
-          </label>
+          <span className="field-label">Wybierz przestrzeń</span>
+          <div className="picker-room-row">
+            <select
+              value={activeRoomId}
+              onChange={(e) => setActiveRoom(e.target.value)}
+            >
+              {rooms.map((r) => {
+                const count = projects.filter(
+                  (p) => p.roomId === r.id
+                ).length;
+                return (
+                  <option key={r.id} value={r.id}>
+                    {r.name} ({count} projektów)
+                  </option>
+                );
+              })}
+            </select>
+            <button
+              type="button"
+              className="btn primary picker-add-room"
+              onClick={handleAddRoom}
+              title="Dodaj nową przestrzeń"
+            >
+              + Nowa przestrzeń
+            </button>
+          </div>
         </div>
 
-        <div className="form-section-title">Pokój „{room.name}"</div>
+        <div className="form-section-title">Przestrzeń „{room.name}"</div>
         <div className="form">
           <div className="form-row">
             <label className="field">
-              <span className="field-label">Nazwa pokoju</span>
+              <span className="field-label">Nazwa przestrzeni</span>
               <span className="field-input">
                 <input
                   type="text"
@@ -136,21 +142,18 @@ export function RoomProjectPicker({
             </label>
           </div>
           <div className="form-actions">
-            <button className="btn primary" onClick={handleAddRoom}>
-              + Nowy pokój
-            </button>
             <button
               className="btn danger"
               onClick={handleDeleteRoom}
               disabled={rooms.length === 1 && projects.length <= 1}
             >
-              Usuń pokój
+              Usuń przestrzeń
             </button>
           </div>
         </div>
 
         <div className="form-section-title">
-          Projekt w pokoju „{room.name}" ({projectsInRoom.length})
+          Projekt w przestrzeni „{room.name}" ({projectsInRoom.length})
         </div>
         <div className="form">
           <div className="form-row">
@@ -185,7 +188,7 @@ export function RoomProjectPicker({
           {rooms.length > 1 && (
             <div className="form-row">
               <label className="field">
-                <span className="field-label">Przenieś projekt do pokoju</span>
+                <span className="field-label">Przenieś projekt do przestrzeni</span>
                 <span className="field-input">
                   <select
                     value={project.roomId}

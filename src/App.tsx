@@ -41,8 +41,8 @@ export default function App() {
         <button
           className="brand brand-button"
           onClick={() => setPickerOpen((v) => !v)}
-          title="Zmień pokój / projekt"
-          aria-label="Otwórz wybór pokoju i projektu"
+          title="Zmień przestrzeń / projekt"
+          aria-label="Otwórz wybór przestrzeni i projektu"
         >
           <span className="brand-mark">M3D</span>
           <div className="brand-text">
