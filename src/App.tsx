@@ -7,6 +7,7 @@ import {
   useActiveProject,
   useActiveRoom,
   useActiveCabinet,
+  useStore,
 } from "./store";
 
 type Tab = "elements" | "parts" | "project";
@@ -22,6 +23,8 @@ export default function App() {
   const project = useActiveProject();
   const room = useActiveRoom();
   const cabinet = useActiveCabinet();
+  const showDimensions = useStore((s) => s.showDimensions);
+  const setShowDimensions = useStore((s) => s.setShowDimensions);
 
   const totalElements = project.cabinets.reduce(
     (s, c) => s + c.elements.length,
@@ -53,6 +56,21 @@ export default function App() {
       <main className="main">
         <section className="canvas-wrap no-print">
           <Wardrobe3D />
+          <div className="canvas-controls">
+            <button
+              className={
+                "canvas-toggle" + (showDimensions ? " active" : "")
+              }
+              onClick={() => setShowDimensions(!showDimensions)}
+              title={
+                showDimensions
+                  ? "Ukryj wymiary na modelu"
+                  : "Pokaż wymiary na modelu"
+              }
+            >
+              {showDimensions ? "Wymiary: ON" : "Wymiary: OFF"}
+            </button>
+          </div>
           <div className="canvas-hint">
             Obróć: 1 palec · Przybliż: szczypta · Przesuń: 2 palce
           </div>

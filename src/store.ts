@@ -432,10 +432,13 @@ interface AppState {
   /** ID aktywnej szafy/modułu wewnątrz aktywnego projektu. */
   activeCabinetId: string;
   selectedElementId: string | null;
+  /** Czy w 3D wyświetlać etykiety z wymiarami. */
+  showDimensions: boolean;
 
   // Pokoje
   setActive: (id: string) => void;
   setSelected: (id: string | null) => void;
+  setShowDimensions: (v: boolean) => void;
   setActiveRoom: (roomId: string) => void;
   addRoom: (name?: string) => void;
   renameRoom: (id: string, name: string) => void;
@@ -505,6 +508,7 @@ export const useStore = create<AppState>()(
         activeId: initialProject.id,
         activeCabinetId: initialProject.cabinets[0].id,
         selectedElementId: null,
+        showDimensions: false,
 
         setActive: (id) =>
           set((s) => {
@@ -534,6 +538,7 @@ export const useStore = create<AppState>()(
             };
           });
         },
+        setShowDimensions: (v) => set({ showDimensions: v }),
         setActiveRoom: (roomId) =>
           set((s) => {
             const room = s.rooms.find((r) => r.id === roomId);

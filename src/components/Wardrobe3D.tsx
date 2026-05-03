@@ -1,5 +1,5 @@
 import { Canvas } from "@react-three/fiber";
-import { OrbitControls, Grid, Environment } from "@react-three/drei";
+import { OrbitControls, Grid, Environment, Html } from "@react-three/drei";
 import { Suspense, useEffect, useMemo } from "react";
 import { useActiveProject, useStore } from "../store";
 import { Cabinet, WardrobeElement } from "../types";
@@ -10,6 +10,7 @@ const MM = 0.001; // milimetry -> metry sceny
 function ElementMesh({ el }: { el: WardrobeElement }) {
   const selectedId = useStore((s) => s.selectedElementId);
   const setSelected = useStore((s) => s.setSelected);
+  const showDimensions = useStore((s) => s.showDimensions);
   const isSelected = selectedId === el.id;
 
   const w = el.width * MM;
@@ -52,6 +53,25 @@ function ElementMesh({ el }: { el: WardrobeElement }) {
           opacity={0.55}
         />
       </lineSegments>
+      {(showDimensions || isSelected) && (
+        <Html
+          position={[0, 0, d / 2 + 0.005]}
+          center
+          zIndexRange={[10, 0]}
+          wrapperClass="dim-label-wrap"
+        >
+          <div
+            className={
+              "dim-label" +
+              (isSelected ? " dim-label-selected" : "") +
+              (!showDimensions && isSelected ? " dim-label-only-selected" : "")
+            }
+          >
+            {Math.round(el.width)}×{Math.round(el.height)}×
+            {Math.round(el.depth)}
+          </div>
+        </Html>
+      )}
     </group>
   );
 }
@@ -63,6 +83,7 @@ function CabinetGroup({
   cabinet: Cabinet;
   active: boolean;
 }) {
+  const showDimensions = useStore((s) => s.showDimensions);
   return (
     <group
       position={[
@@ -92,6 +113,26 @@ function CabinetGroup({
             side={THREE.DoubleSide}
           />
         </mesh>
+      )}
+      {showDimensions && (
+        <Html
+          position={[0, cabinet.outerHeight * MM + 0.08, 0]}
+          center
+          zIndexRange={[20, 10]}
+          wrapperClass="cab-label-wrap"
+        >
+          <div
+            className={
+              "cab-label" + (active ? " cab-label-active" : "")
+            }
+          >
+            <div className="cab-label-name">{cabinet.name}</div>
+            <div className="cab-label-dims">
+              {cabinet.outerWidth} × {cabinet.outerHeight} ×{" "}
+              {cabinet.outerDepth} mm
+            </div>
+          </div>
+        </Html>
       )}
       {cabinet.elements
         .filter((el) => !el.hidden)
