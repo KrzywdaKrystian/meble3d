@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Wardrobe3D } from "./components/Wardrobe3D";
+import { Plan2D } from "./components/Plan2D";
 import { ElementEditor } from "./components/ElementEditor";
 import { PartsList } from "./components/PartsList";
 import { ProjectPanel } from "./components/ProjectPanel";
@@ -33,6 +34,8 @@ export default function App() {
   const setShowWalls = useStore((s) => s.setShowWalls);
   const showFloorOutlineOnly = useStore((s) => s.showFloorOutlineOnly);
   const setShowFloorOutlineOnly = useStore((s) => s.setShowFloorOutlineOnly);
+  const viewMode = useStore((s) => s.viewMode);
+  const setViewMode = useStore((s) => s.setViewMode);
 
   const totalElements = project.cabinets.reduce(
     (s, c) => s + c.elements.length,
@@ -71,8 +74,19 @@ export default function App() {
 
       <main className="main">
         <section className="canvas-wrap no-print">
-          <Wardrobe3D />
+          {viewMode === "3d" ? <Wardrobe3D /> : <Plan2D />}
           <div className="canvas-controls">
+            <button
+              className={"canvas-toggle" + (viewMode === "2d" ? " active" : "")}
+              onClick={() => setViewMode(viewMode === "3d" ? "2d" : "3d")}
+              title={
+                viewMode === "2d"
+                  ? "Wróć do widoku 3D"
+                  : "Pokaż rzut 2D z góry"
+              }
+            >
+              {viewMode === "2d" ? "Widok: 2D" : "Widok: 3D"}
+            </button>
             <button
               className={
                 "canvas-toggle" + (showDimensions ? " active" : "")

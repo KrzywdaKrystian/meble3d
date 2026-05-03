@@ -463,6 +463,8 @@ interface AppState {
   showWalls: boolean;
   /** Czy zamiast ścian pokazać tylko obrys podłogi. */
   showFloorOutlineOnly: boolean;
+  /** Tryb widoku: 3D scena lub 2D rzut z góry. */
+  viewMode: "3d" | "2d";
 
   // Layout pomieszczenia
   toggleRoomLayout: (roomId: string, enabled: boolean) => void;
@@ -489,6 +491,7 @@ interface AppState {
   setShowCabinetLabels: (v: boolean) => void;
   setShowWalls: (v: boolean) => void;
   setShowFloorOutlineOnly: (v: boolean) => void;
+  setViewMode: (m: "3d" | "2d") => void;
   setActiveRoom: (roomId: string) => void;
   addRoom: (name?: string) => void;
   renameRoom: (id: string, name: string) => void;
@@ -569,6 +572,7 @@ export const useStore = create<AppState>()(
         showCabinetLabels: false,
         showWalls: true,
         showFloorOutlineOnly: false,
+        viewMode: "3d",
 
         setActive: (id) =>
           set((s) => {
@@ -602,6 +606,7 @@ export const useStore = create<AppState>()(
         setShowCabinetLabels: (v) => set({ showCabinetLabels: v }),
         setShowWalls: (v) => set({ showWalls: v }),
         setShowFloorOutlineOnly: (v) => set({ showFloorOutlineOnly: v }),
+        setViewMode: (m) => set({ viewMode: m }),
 
         toggleRoomLayout: (roomId, enabled) =>
           set((s) => ({
