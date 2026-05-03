@@ -11,6 +11,8 @@ import { buildProjectDxf } from "../lib/dxf";
 import { projectEdgeBandingTotals } from "../lib/edges";
 import { nestProject } from "../lib/nesting";
 import { NestingView } from "./NestingView";
+import { buildShareUrl } from "../lib/share";
+import { useActiveRoom } from "../store";
 
 interface SourceElement {
   el: WardrobeElement;
@@ -93,6 +95,7 @@ function downloadFile(name: string, content: string, mime: string) {
 
 export function PartsList() {
   const project = useActiveProject();
+  const room = useActiveRoom();
   const pricing = useStore((s) => s.pricing);
   const setPricing = useStore((s) => s.setPricing);
   const [scope, setScope] = useState<"all" | string>("all");
@@ -256,6 +259,34 @@ export function PartsList() {
           title="Eksport paneli do DXF (CAD / CNC)"
         >
           Pobierz DXF
+        </button>
+        <button
+          className="btn ghost"
+          onClick={async () => {
+            const url = buildShareUrl({
+              v: 1,
+              roomName: room.name,
+              roomLayout: room.layout,
+              project,
+            });
+            try {
+              if (navigator.clipboard?.writeText) {
+                await navigator.clipboard.writeText(url);
+                alert(
+                  "Link skopiowany do schowka.\n\nDługość: " +
+                    url.length +
+                    ' znaków. Wyślij klientowi – po otwarciu projekt trafi do przestrzeni „Udostępnione (link)".'
+                );
+              } else {
+                prompt("Skopiuj poniższy link i wyślij klientowi:", url);
+              }
+            } catch {
+              prompt("Skopiuj poniższy link i wyślij klientowi:", url);
+            }
+          }}
+          title="Wygeneruj link, który otworzy ten projekt na innym urządzeniu"
+        >
+          Udostępnij link
         </button>
       </div>
 

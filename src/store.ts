@@ -539,6 +539,13 @@ interface AppState {
   showAll: () => void;
   resetActiveCabinet: () => void;
 
+  /** Importuje projekt z linku share – tworzy/przypina przestrzeń „Udostępnione" i ustawia ją jako aktywną. */
+  importSharedProject: (payload: {
+    project: Project;
+    roomName: string;
+    roomLayout?: Room["layout"];
+  }) => void;
+
   // Kreatory wieloelementowe (szuflada, drzwi)
   addDrawerSet: (params: {
     width: number;
@@ -1231,6 +1238,51 @@ export const useStore = create<AppState>()(
             }))
           );
           set({ selectedElementId: null });
+        },
+
+        importSharedProject: (payload) => {
+          set((s) => {
+            // Znajdź lub utwórz przestrzeń „Udostępnione".
+            let target = s.rooms.find(
+              (r) => r.name === "Udostępnione (link)"
+            );
+            const newRooms = [...s.rooms];
+            if (!target) {
+              target = {
+                id: uid(),
+                name: "Udostępnione (link)",
+                createdAt: Date.now(),
+                layout: payload.roomLayout,
+              };
+              newRooms.push(target);
+            }
+            // Skopiuj projekt z nowymi ID (żeby uniknąć kolizji z istniejącymi).
+            const importedProject: Project = {
+              ...payload.project,
+              id: uid(),
+              roomId: target.id,
+              name:
+                payload.project.name +
+                " (z linku · " +
+                payload.roomName +
+                ")",
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+              cabinets: payload.project.cabinets.map((c) => ({
+                ...c,
+                id: uid(),
+                elements: c.elements.map((e) => ({ ...e, id: uid() })),
+              })),
+            };
+            return {
+              rooms: newRooms,
+              projects: [...s.projects, importedProject],
+              activeRoomId: target.id,
+              activeId: importedProject.id,
+              activeCabinetId: importedProject.cabinets[0]?.id ?? "",
+              selectedElementId: null,
+            };
+          });
         },
 
         addDrawerSet: (params) => {
