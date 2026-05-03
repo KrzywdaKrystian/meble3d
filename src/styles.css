@@ -164,8 +164,11 @@ textarea {
   top: 10px;
   right: 10px;
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 6px;
   z-index: 5;
+  max-width: calc(100% - 20px);
 }
 
 .canvas-toggle {

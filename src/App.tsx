@@ -25,6 +25,8 @@ export default function App() {
   const cabinet = useActiveCabinet();
   const showDimensions = useStore((s) => s.showDimensions);
   const setShowDimensions = useStore((s) => s.setShowDimensions);
+  const showCabinetLabels = useStore((s) => s.showCabinetLabels);
+  const setShowCabinetLabels = useStore((s) => s.setShowCabinetLabels);
 
   const totalElements = project.cabinets.reduce(
     (s, c) => s + c.elements.length,
@@ -64,11 +66,24 @@ export default function App() {
               onClick={() => setShowDimensions(!showDimensions)}
               title={
                 showDimensions
-                  ? "Ukryj wymiary na modelu"
-                  : "Pokaż wymiary na modelu"
+                  ? "Ukryj wymiary elementów"
+                  : "Pokaż wymiary elementów na modelu"
               }
             >
-              {showDimensions ? "Wymiary: ON" : "Wymiary: OFF"}
+              {showDimensions ? "Wymiary el.: ON" : "Wymiary el.: OFF"}
+            </button>
+            <button
+              className={
+                "canvas-toggle" + (showCabinetLabels ? " active" : "")
+              }
+              onClick={() => setShowCabinetLabels(!showCabinetLabels)}
+              title={
+                showCabinetLabels
+                  ? "Ukryj etykiety szaf"
+                  : "Pokaż etykiety nad szafami (nazwa + gabaryty)"
+              }
+            >
+              {showCabinetLabels ? "Etykiety szaf: ON" : "Etykiety szaf: OFF"}
             </button>
           </div>
           <div className="canvas-hint">

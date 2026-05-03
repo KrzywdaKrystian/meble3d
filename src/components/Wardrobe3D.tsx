@@ -83,7 +83,7 @@ function CabinetGroup({
   cabinet: Cabinet;
   active: boolean;
 }) {
-  const showDimensions = useStore((s) => s.showDimensions);
+  const showCabinetLabels = useStore((s) => s.showCabinetLabels);
   return (
     <group
       position={[
@@ -114,7 +114,7 @@ function CabinetGroup({
           />
         </mesh>
       )}
-      {showDimensions && (
+      {showCabinetLabels && (
         <Html
           position={[0, cabinet.outerHeight * MM + 0.08, 0]}
           center
