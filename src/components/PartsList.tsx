@@ -9,6 +9,8 @@ import {
 import { buildQuote, formatPLN } from "../lib/pricing";
 import { buildProjectDxf } from "../lib/dxf";
 import { projectEdgeBandingTotals } from "../lib/edges";
+import { nestProject } from "../lib/nesting";
+import { NestingView } from "./NestingView";
 
 interface SourceElement {
   el: WardrobeElement;
@@ -109,6 +111,14 @@ export function PartsList() {
     [project]
   );
   const edgeMetersTotal = edgeTotals.reduce((s, e) => s + e.meters, 0);
+  const [showNesting, setShowNesting] = useState(false);
+  const nesting = useMemo(
+    () =>
+      showNesting
+        ? nestProject(project, pricing.sheetWidth, pricing.sheetHeight)
+        : [],
+    [showNesting, project, pricing.sheetWidth, pricing.sheetHeight]
+  );
 
   const cabinetsForScope = useMemo(() => {
     if (scope === "all") return project.cabinets;
@@ -248,6 +258,30 @@ export function PartsList() {
           Pobierz DXF
         </button>
       </div>
+
+      <div className="form-section-title no-print">Optymalizacja rozkroju</div>
+      <div className="form-actions no-print">
+        <button
+          className={"btn " + (showNesting ? "ghost" : "primary")}
+          onClick={() => setShowNesting((v) => !v)}
+        >
+          {showNesting
+            ? "Ukryj rozkrój"
+            : "Pokaż rozkrój na arkuszach " +
+              pricing.sheetWidth +
+              " × " +
+              pricing.sheetHeight}
+        </button>
+      </div>
+      {showNesting && (
+        <div className="no-print">
+          <NestingView
+            results={nesting}
+            sheetW={pricing.sheetWidth}
+            sheetH={pricing.sheetHeight}
+          />
+        </div>
+      )}
 
       <div className="form-section-title no-print">
         Oklejenie ABS ({edgeMetersTotal.toFixed(2)} mb)
