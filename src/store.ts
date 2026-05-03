@@ -538,6 +538,25 @@ interface AppState {
   toggleHidden: (id: string) => void;
   showAll: () => void;
   resetActiveCabinet: () => void;
+
+  // Kreatory wieloelementowe (szuflada, drzwi)
+  addDrawerSet: (params: {
+    width: number;
+    height: number;
+    length: number;
+    x: number;
+    y: number;
+    name?: string;
+  }) => void;
+  addDoorSet: (params: {
+    count: number;
+    totalWidth: number;
+    height: number;
+    gap: number;
+    x: number;
+    y: number;
+    namePrefix?: string;
+  }) => void;
 }
 
 /**
@@ -1212,6 +1231,157 @@ export const useStore = create<AppState>()(
             }))
           );
           set({ selectedElementId: null });
+        },
+
+        addDrawerSet: (params) => {
+          // Budujemy 5 elementów szuflady wg standardu 18 mm korpus + 3 mm HDF dno.
+          const { width: W, height: H, length: L, x, y, name } = params;
+          const t = 18;
+          const baseName = name?.trim() || "Szuflada";
+          set((s) =>
+            patchActiveCabinet(s, (c) => {
+              const cabinetHalfDepth = c.outerDepth / 2;
+              // Front = z lekkim wystawaniem na zewnątrz.
+              const frontZ = cabinetHalfDepth + t / 2;
+              const backOfFrontZ = cabinetHalfDepth;
+              const drawerInsideEndZ = backOfFrontZ - L;
+              const sidesCenterZ = (backOfFrontZ + drawerInsideEndZ) / 2;
+              const els: WardrobeElement[] = [
+                {
+                  id: uid(),
+                  type: "front-szuflady",
+                  name: baseName + " – front",
+                  width: W,
+                  height: H,
+                  depth: t,
+                  x,
+                  y,
+                  z: frontZ,
+                  thickness: t,
+                  material: "Płyta meblowa 18 mm",
+                  color: ELEMENT_DEFAULT_COLOR["front-szuflady"],
+                  quantity: 1,
+                },
+                {
+                  id: uid(),
+                  type: "bok",
+                  name: baseName + " – bok lewy",
+                  width: t,
+                  height: Math.max(20, H - 20),
+                  depth: L,
+                  x: x - W / 2 + t / 2,
+                  y,
+                  z: sidesCenterZ,
+                  thickness: t,
+                  material: "Płyta meblowa 18 mm",
+                  color: ELEMENT_DEFAULT_COLOR.bok,
+                  quantity: 1,
+                  notes: "Bok szuflady",
+                },
+                {
+                  id: uid(),
+                  type: "bok",
+                  name: baseName + " – bok prawy",
+                  width: t,
+                  height: Math.max(20, H - 20),
+                  depth: L,
+                  x: x + W / 2 - t / 2,
+                  y,
+                  z: sidesCenterZ,
+                  thickness: t,
+                  material: "Płyta meblowa 18 mm",
+                  color: ELEMENT_DEFAULT_COLOR.bok,
+                  quantity: 1,
+                  notes: "Bok szuflady",
+                },
+                {
+                  id: uid(),
+                  type: "plecy",
+                  name: baseName + " – tył",
+                  width: Math.max(20, W - 2 * t - 4),
+                  height: Math.max(20, H - 30),
+                  depth: t,
+                  x,
+                  y,
+                  z: drawerInsideEndZ + t / 2,
+                  thickness: t,
+                  material: "Płyta meblowa 18 mm",
+                  color: ELEMENT_DEFAULT_COLOR.plecy,
+                  quantity: 1,
+                  notes: "Tył szuflady (płyta)",
+                },
+                {
+                  id: uid(),
+                  type: "polka",
+                  name: baseName + " – dno HDF",
+                  width: Math.max(20, W - 2 * t - 4),
+                  height: 3,
+                  depth: Math.max(20, L - t - 4),
+                  x,
+                  y: y - H / 2 + 5,
+                  z: sidesCenterZ,
+                  thickness: 3,
+                  material: "HDF 3 mm",
+                  color: ELEMENT_DEFAULT_COLOR.polka,
+                  quantity: 1,
+                  notes: "Dno szuflady",
+                },
+              ];
+              return { ...c, elements: [...c.elements, ...els] };
+            })
+          );
+        },
+
+        addDoorSet: (params) => {
+          const {
+            count,
+            totalWidth,
+            height,
+            gap,
+            x,
+            y,
+            namePrefix,
+          } = params;
+          const n = Math.max(1, Math.min(6, Math.round(count)));
+          const safeGap = Math.max(0, gap);
+          const t = 18;
+          const eachW = (totalWidth - (n - 1) * safeGap) / n;
+          if (eachW <= 0) return;
+          const prefix = namePrefix?.trim() || "Drzwi";
+          set((s) =>
+            patchActiveCabinet(s, (c) => {
+              const z = c.outerDepth / 2 + t / 2;
+              const startX = x - totalWidth / 2 + eachW / 2;
+              const els: WardrobeElement[] = [];
+              for (let i = 0; i < n; i++) {
+                els.push({
+                  id: uid(),
+                  type: "drzwi",
+                  name:
+                    prefix +
+                    " " +
+                    (n === 1
+                      ? ""
+                      : i === 0
+                        ? "(lewe)"
+                        : i === n - 1
+                          ? "(prawe)"
+                          : "(środk. " + i + ")"),
+                  width: eachW,
+                  height,
+                  depth: t,
+                  x: startX + i * (eachW + safeGap),
+                  y,
+                  z,
+                  thickness: t,
+                  material: "Płyta meblowa 18 mm",
+                  color: ELEMENT_DEFAULT_COLOR.drzwi,
+                  quantity: 1,
+                });
+              }
+              return { ...c, elements: [...c.elements, ...els] };
+            })
+          );
         },
       };
     },

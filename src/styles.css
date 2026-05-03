@@ -690,6 +690,12 @@ textarea {
   border-color: var(--primary-2);
 }
 
+.chip-active {
+  background: var(--primary);
+  border-color: var(--primary-2);
+  color: white;
+}
+
 /* ===== Element list ===== */
 .elist {
   list-style: none;

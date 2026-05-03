@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   useStore,
   useActiveProject,
@@ -272,9 +273,15 @@ export function ElementEditor() {
   const activeCabinetId = useStore((s) => s.activeCabinetId);
   const setActiveCabinet = useStore((s) => s.setActiveCabinet);
   const addElement = useStore((s) => s.addElement);
+  const addDrawerSet = useStore((s) => s.addDrawerSet);
+  const addDoorSet = useStore((s) => s.addDoorSet);
   const setSelected = useStore((s) => s.setSelected);
   const toggleHidden = useStore((s) => s.toggleHidden);
   const showAll = useStore((s) => s.showAll);
+
+  const [openWizard, setOpenWizard] = useState<"none" | "drawer" | "door">(
+    "none"
+  );
 
   const selected = cabinet.elements.find((e) => e.id === selectedId);
   const hiddenCount = cabinet.elements.filter((e) => e.hidden).length;
@@ -319,6 +326,51 @@ export function ElementEditor() {
             </button>
           ))}
         </div>
+        <div className="add-bar-label" style={{ marginTop: 10 }}>
+          Szybkie kreatory:
+        </div>
+        <div className="chips">
+          <button
+            className={
+              "chip" + (openWizard === "drawer" ? " chip-active" : "")
+            }
+            onClick={() =>
+              setOpenWizard((v) => (v === "drawer" ? "none" : "drawer"))
+            }
+          >
+            ▾ Szuflada (5 elementów)
+          </button>
+          <button
+            className={
+              "chip" + (openWizard === "door" ? " chip-active" : "")
+            }
+            onClick={() =>
+              setOpenWizard((v) => (v === "door" ? "none" : "door"))
+            }
+          >
+            ▾ Komplet drzwi
+          </button>
+        </div>
+        {openWizard === "drawer" && (
+          <DrawerWizardForm
+            cabinet={cabinet}
+            onSubmit={(p) => {
+              addDrawerSet(p);
+              setOpenWizard("none");
+            }}
+            onCancel={() => setOpenWizard("none")}
+          />
+        )}
+        {openWizard === "door" && (
+          <DoorWizardForm
+            cabinet={cabinet}
+            onSubmit={(p) => {
+              addDoorSet(p);
+              setOpenWizard("none");
+            }}
+            onCancel={() => setOpenWizard("none")}
+          />
+        )}
       </div>
 
       {selected ? (
@@ -380,6 +432,267 @@ export function ElementEditor() {
           </li>
         ))}
       </ul>
+    </div>
+  );
+}
+
+function DrawerWizardForm({
+  cabinet,
+  onSubmit,
+  onCancel,
+}: {
+  cabinet: ReturnType<typeof useActiveCabinet>;
+  onSubmit: (p: {
+    width: number;
+    height: number;
+    length: number;
+    x: number;
+    y: number;
+    name?: string;
+  }) => void;
+  onCancel: () => void;
+}) {
+  const innerW = Math.max(100, cabinet.outerWidth - 36);
+  const [width, setWidth] = useState(innerW);
+  const [height, setHeight] = useState(200);
+  const [length, setLength] = useState(
+    Math.max(100, cabinet.outerDepth - 50)
+  );
+  const [x, setX] = useState(0);
+  const [y, setY] = useState(400);
+  const [name, setName] = useState("Szuflada");
+  return (
+    <div className="form sub-form" style={{ marginTop: 10 }}>
+      <div className="form-row">
+        <label className="field">
+          <span className="field-label">Nazwa zestawu</span>
+          <span className="field-input">
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </span>
+        </label>
+      </div>
+      <div className="form-row grid-3">
+        <label className="field">
+          <span className="field-label">Szerokość frontu [mm]</span>
+          <span className="field-input">
+            <input
+              type="number"
+              inputMode="numeric"
+              value={width}
+              onChange={(e) => setWidth(parseFloat(e.target.value) || 0)}
+            />
+          </span>
+        </label>
+        <label className="field">
+          <span className="field-label">Wysokość frontu [mm]</span>
+          <span className="field-input">
+            <input
+              type="number"
+              inputMode="numeric"
+              value={height}
+              onChange={(e) => setHeight(parseFloat(e.target.value) || 0)}
+            />
+          </span>
+        </label>
+        <label className="field">
+          <span className="field-label">Głębokość boków [mm]</span>
+          <span className="field-input">
+            <input
+              type="number"
+              inputMode="numeric"
+              value={length}
+              onChange={(e) => setLength(parseFloat(e.target.value) || 0)}
+            />
+          </span>
+        </label>
+      </div>
+      <div className="form-row grid-3">
+        <label className="field">
+          <span className="field-label">Pozycja X frontu [mm]</span>
+          <span className="field-input">
+            <input
+              type="number"
+              inputMode="numeric"
+              value={x}
+              onChange={(e) => setX(parseFloat(e.target.value) || 0)}
+            />
+          </span>
+        </label>
+        <label className="field">
+          <span className="field-label">Wysokość Y środka [mm]</span>
+          <span className="field-input">
+            <input
+              type="number"
+              inputMode="numeric"
+              value={y}
+              onChange={(e) => setY(parseFloat(e.target.value) || 0)}
+            />
+          </span>
+        </label>
+      </div>
+      <div className="form-actions">
+        <button
+          className="btn primary"
+          onClick={() =>
+            onSubmit({ width, height, length, x, y, name })
+          }
+        >
+          Utwórz szufladę (5 elementów)
+        </button>
+        <button className="btn ghost" onClick={onCancel}>
+          Anuluj
+        </button>
+      </div>
+      <p className="hint">
+        Generuje: front, 2 boki, tył (płyta) i dno HDF 3 mm. Pozycje są
+        wyliczone tak, by szuflada wsunęła się w aktywną szafę. Po dodaniu
+        możesz dowolnie poprawić pojedyncze elementy.
+      </p>
+    </div>
+  );
+}
+
+function DoorWizardForm({
+  cabinet,
+  onSubmit,
+  onCancel,
+}: {
+  cabinet: ReturnType<typeof useActiveCabinet>;
+  onSubmit: (p: {
+    count: number;
+    totalWidth: number;
+    height: number;
+    gap: number;
+    x: number;
+    y: number;
+    namePrefix?: string;
+  }) => void;
+  onCancel: () => void;
+}) {
+  const [count, setCount] = useState(2);
+  const [totalWidth, setTotalWidth] = useState(
+    Math.max(100, cabinet.outerWidth - 6)
+  );
+  const [height, setHeight] = useState(
+    Math.max(100, cabinet.outerHeight - 110)
+  );
+  const [gap, setGap] = useState(3);
+  const [x, setX] = useState(0);
+  const [y, setY] = useState(
+    Math.round((cabinet.plinthHeight ?? 100) + (cabinet.outerHeight - (cabinet.plinthHeight ?? 100)) / 2)
+  );
+  const [namePrefix, setNamePrefix] = useState("Drzwi");
+  return (
+    <div className="form sub-form" style={{ marginTop: 10 }}>
+      <div className="form-row grid-3">
+        <label className="field">
+          <span className="field-label">Liczba drzwi</span>
+          <span className="field-input">
+            <input
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={6}
+              value={count}
+              onChange={(e) =>
+                setCount(Math.max(1, Math.min(6, parseInt(e.target.value, 10) || 1)))
+              }
+            />
+          </span>
+        </label>
+        <label className="field">
+          <span className="field-label">Szczelina [mm]</span>
+          <span className="field-input">
+            <input
+              type="number"
+              inputMode="numeric"
+              value={gap}
+              onChange={(e) => setGap(parseFloat(e.target.value) || 0)}
+            />
+          </span>
+        </label>
+        <label className="field">
+          <span className="field-label">Prefiks nazwy</span>
+          <span className="field-input">
+            <input
+              type="text"
+              value={namePrefix}
+              onChange={(e) => setNamePrefix(e.target.value)}
+            />
+          </span>
+        </label>
+      </div>
+      <div className="form-row grid-3">
+        <label className="field">
+          <span className="field-label">Łączna szerokość [mm]</span>
+          <span className="field-input">
+            <input
+              type="number"
+              inputMode="numeric"
+              value={totalWidth}
+              onChange={(e) =>
+                setTotalWidth(parseFloat(e.target.value) || 0)
+              }
+            />
+          </span>
+        </label>
+        <label className="field">
+          <span className="field-label">Wysokość [mm]</span>
+          <span className="field-input">
+            <input
+              type="number"
+              inputMode="numeric"
+              value={height}
+              onChange={(e) => setHeight(parseFloat(e.target.value) || 0)}
+            />
+          </span>
+        </label>
+      </div>
+      <div className="form-row grid-3">
+        <label className="field">
+          <span className="field-label">Środek X [mm]</span>
+          <span className="field-input">
+            <input
+              type="number"
+              inputMode="numeric"
+              value={x}
+              onChange={(e) => setX(parseFloat(e.target.value) || 0)}
+            />
+          </span>
+        </label>
+        <label className="field">
+          <span className="field-label">Środek Y [mm]</span>
+          <span className="field-input">
+            <input
+              type="number"
+              inputMode="numeric"
+              value={y}
+              onChange={(e) => setY(parseFloat(e.target.value) || 0)}
+            />
+          </span>
+        </label>
+      </div>
+      <div className="form-actions">
+        <button
+          className="btn primary"
+          onClick={() =>
+            onSubmit({ count, totalWidth, height, gap, x, y, namePrefix })
+          }
+        >
+          Utwórz {count} {count === 1 ? "drzwi" : "drzwi"}
+        </button>
+        <button className="btn ghost" onClick={onCancel}>
+          Anuluj
+        </button>
+      </div>
+      <p className="hint">
+        Każde drzwi otrzymują równą szerokość = (szerokość − (n−1)×szczelina) / n.
+        Z = przed frontem szafy (na zewnątrz korpusu).
+      </p>
     </div>
   );
 }
