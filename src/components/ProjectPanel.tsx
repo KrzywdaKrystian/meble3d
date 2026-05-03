@@ -2,9 +2,7 @@ import { useEffect, useState } from "react";
 import {
   useStore,
   useActiveProject,
-  useActiveRoom,
   useActiveCabinet,
-  useProjectsInActiveRoom,
 } from "../store";
 import {
   PLINTH_DESCRIPTIONS,
@@ -22,21 +20,7 @@ const PLINTH_TYPES: PlinthType[] = [
 
 export function ProjectPanel() {
   const {
-    rooms,
-    projects,
-    activeId,
-    activeRoomId,
     activeCabinetId,
-    setActive,
-    setActiveRoom,
-    addRoom,
-    renameRoom,
-    deleteRoom,
-    moveProjectToRoom,
-    newProject,
-    duplicateProject,
-    deleteProject,
-    renameProject,
     setActiveCabinet,
     addCabinet,
     duplicateCabinet,
@@ -49,8 +33,6 @@ export function ProjectPanel() {
     resetActiveCabinet,
   } = useStore();
   const project = useActiveProject();
-  const room = useActiveRoom();
-  const projectsInRoom = useProjectsInActiveRoom();
   const cabinet = useActiveCabinet();
 
   // Lokalny state dla edytowalnych pól, żeby user mógł wpisać wartość
@@ -146,27 +128,6 @@ export function ProjectPanel() {
     }
   };
 
-  const handleAddRoom = () => {
-    const name = prompt("Nazwa nowego pokoju (np. Sypialnia):", "");
-    if (name && name.trim()) {
-      addRoom(name.trim());
-    }
-  };
-
-  const handleDeleteRoom = () => {
-    const inRoom = projects.filter((p) => p.roomId === room.id);
-    const msg =
-      "Usunąć pokój „" +
-      room.name +
-      "”" +
-      (inRoom.length > 0
-        ? " razem z " + inRoom.length + " projektami w środku?"
-        : "?");
-    if (confirm(msg)) {
-      deleteRoom(room.id);
-    }
-  };
-
   const handleAddCabinet = (empty: boolean) => {
     const defaultName = empty
       ? "Moduł " + (project.cabinets.length + 1)
@@ -192,144 +153,6 @@ export function ProjectPanel() {
 
   return (
     <div className="panel-content">
-      {/* ===== Pokój ===== */}
-      <div className="form-section-title">Pokój</div>
-      <div className="form">
-        <div className="form-row">
-          <label className="field">
-            <span className="field-label">Aktywny pokój</span>
-            <span className="field-input">
-              <select
-                value={activeRoomId}
-                onChange={(e) => setActiveRoom(e.target.value)}
-              >
-                {rooms.map((r) => {
-                  const count = projects.filter(
-                    (p) => p.roomId === r.id
-                  ).length;
-                  return (
-                    <option key={r.id} value={r.id}>
-                      {r.name} ({count})
-                    </option>
-                  );
-                })}
-              </select>
-            </span>
-          </label>
-        </div>
-        <div className="form-row">
-          <label className="field">
-            <span className="field-label">Nazwa pokoju</span>
-            <span className="field-input">
-              <input
-                type="text"
-                value={room.name}
-                onChange={(e) => renameRoom(room.id, e.target.value)}
-              />
-            </span>
-          </label>
-        </div>
-        <div className="form-actions">
-          <button className="btn primary" onClick={handleAddRoom}>
-            + Nowy pokój
-          </button>
-          <button
-            className="btn danger"
-            onClick={handleDeleteRoom}
-            disabled={rooms.length === 1 && projects.length <= 1}
-          >
-            Usuń pokój
-          </button>
-        </div>
-      </div>
-
-      {/* ===== Projekt ===== */}
-      <div className="form-section-title">
-        Projekt w pokoju „{room.name}" ({projectsInRoom.length})
-      </div>
-      <div className="form">
-        <div className="form-row">
-          <label className="field">
-            <span className="field-label">Aktywny projekt</span>
-            <span className="field-input">
-              <select
-                value={activeId}
-                onChange={(e) => setActive(e.target.value)}
-              >
-                {projectsInRoom.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-            </span>
-          </label>
-        </div>
-        <div className="form-row">
-          <label className="field">
-            <span className="field-label">Nazwa projektu</span>
-            <span className="field-input">
-              <input
-                type="text"
-                value={project.name}
-                onChange={(e) => renameProject(project.id, e.target.value)}
-              />
-            </span>
-          </label>
-        </div>
-        {rooms.length > 1 && (
-          <div className="form-row">
-            <label className="field">
-              <span className="field-label">Przenieś projekt do pokoju</span>
-              <span className="field-input">
-                <select
-                  value={project.roomId}
-                  onChange={(e) =>
-                    moveProjectToRoom(project.id, e.target.value)
-                  }
-                >
-                  {rooms.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.name}
-                    </option>
-                  ))}
-                </select>
-              </span>
-            </label>
-          </div>
-        )}
-        <div className="form-actions">
-          <button className="btn primary" onClick={() => newProject()}>
-            + Z szablonu
-          </button>
-          <button
-            className="btn ghost"
-            onClick={() =>
-              newProject({ empty: true, name: "Nowa zabudowa" })
-            }
-          >
-            + Pusty
-          </button>
-          <button className="btn ghost" onClick={duplicateProject}>
-            Duplikuj
-          </button>
-          <button
-            className="btn danger"
-            onClick={() => {
-              if (
-                confirm(
-                  "Usunąć projekt „" + project.name + "”? (nieodwracalne)"
-                )
-              ) {
-                deleteProject(project.id);
-              }
-            }}
-          >
-            Usuń
-          </button>
-        </div>
-      </div>
-
       {/* ===== Szafy / moduły ===== */}
       <div className="form-section-title">
         Szafy / moduły w projekcie ({project.cabinets.length})

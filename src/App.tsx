@@ -3,6 +3,7 @@ import { Wardrobe3D } from "./components/Wardrobe3D";
 import { ElementEditor } from "./components/ElementEditor";
 import { PartsList } from "./components/PartsList";
 import { ProjectPanel } from "./components/ProjectPanel";
+import { RoomProjectPicker } from "./components/RoomProjectPicker";
 import {
   useActiveProject,
   useActiveRoom,
@@ -20,6 +21,7 @@ const TABS: { id: Tab; label: string; icon: string }[] = [
 
 export default function App() {
   const [tab, setTab] = useState<Tab>("elements");
+  const [pickerOpen, setPickerOpen] = useState(false);
   const project = useActiveProject();
   const room = useActiveRoom();
   const cabinet = useActiveCabinet();
@@ -36,9 +38,14 @@ export default function App() {
   return (
     <div className="app">
       <header className="topbar no-print">
-        <div className="brand">
+        <button
+          className="brand brand-button"
+          onClick={() => setPickerOpen((v) => !v)}
+          title="Zmień pokój / projekt"
+          aria-label="Otwórz wybór pokoju i projektu"
+        >
           <span className="brand-mark">M3D</span>
-          <div>
+          <div className="brand-text">
             <div className="brand-title">
               {room.name} · {project.name}
             </div>
@@ -51,7 +58,10 @@ export default function App() {
                 : cabinet.name}
             </div>
           </div>
-        </div>
+          <span className="brand-chevron" aria-hidden="true">
+            ▾
+          </span>
+        </button>
         <div className="topbar-meta">{totalElements} elementów</div>
       </header>
 
@@ -111,6 +121,11 @@ export default function App() {
           </div>
         </section>
       </main>
+
+      <RoomProjectPicker
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+      />
 
       {/* Wersja drukowana */}
       <section className="print-only">
