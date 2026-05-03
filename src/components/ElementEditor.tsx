@@ -209,7 +209,9 @@ function ElementForm({ el }: { el: WardrobeElement }) {
         <NumberField
           label="Sztuk"
           value={el.quantity}
-          onChange={(v) => u({ quantity: Math.max(1, Math.round(v)) })}
+          onChange={(v) =>
+            u({ quantity: Math.max(1, Math.min(1000, Math.round(v))) })
+          }
           suffix="szt."
         />
         <label className="field">

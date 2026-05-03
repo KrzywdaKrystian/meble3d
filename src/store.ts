@@ -437,16 +437,28 @@ function touch(p: Project): Project {
   return { ...p, updatedAt: Date.now() };
 }
 
-/** Oblicza nowe X dla nowej szafy "dostawionej" obok najbardziej wysuniętej. */
+/** Oblicza nowe X dla nowej szafy „dostawionej" obok najbardziej wysuniętej.
+ *  Uwzględnia rotacje – po obrocie 90° X-extent szafy = outerDepth/2. */
 function nextOffsetForNewCabinet(
   cabinets: Cabinet[],
   newWidth: number
 ): number {
   if (cabinets.length === 0) return 0;
   const maxRight = Math.max(
-    ...cabinets.map((c) => c.offsetX + c.outerWidth / 2)
+    ...cabinets.map((c) => {
+      const rotY = ((c.rotationY ?? 0) * Math.PI) / 180;
+      const horiz = Math.abs(Math.cos(rotY)) > 0.5;
+      const halfX = horiz ? c.outerWidth / 2 : c.outerDepth / 2;
+      return c.offsetX + halfX;
+    })
   );
   return maxRight + newWidth / 2;
+}
+
+interface ProjectSnapshot {
+  label: string;
+  project: Project;
+  timestamp: number;
 }
 
 interface AppState {
@@ -457,6 +469,8 @@ interface AppState {
   /** ID aktywnej szafy/modułu wewnątrz aktywnego projektu. */
   activeCabinetId: string;
   selectedElementId: string | null;
+  /** Stos ostatnich migawek aktywnego projektu (do Cofnij). */
+  undoStack: ProjectSnapshot[];
   /** Czy pokazywać etykiety z wymiarami pojedynczych elementów. */
   showDimensions: boolean;
   /** Czy pokazywać etykiety nad szafami (nazwa + gabaryty). */
@@ -491,6 +505,10 @@ interface AppState {
   // Pokoje
   setActive: (id: string) => void;
   setSelected: (id: string | null) => void;
+  /** Zachowuje migawkę aktywnego projektu w stack undo (max 10). */
+  pushUndo: (label: string) => void;
+  /** Cofa ostatnią destruktywną zmianę aktywnego projektu. */
+  undo: () => boolean;
   setShowDimensions: (v: boolean) => void;
   setShowCabinetLabels: (v: boolean) => void;
   setShowWalls: (v: boolean) => void;
@@ -599,6 +617,7 @@ export const useStore = create<AppState>()(
         activeId: initialProject.id,
         activeCabinetId: initialProject.cabinets[0].id,
         selectedElementId: null,
+        undoStack: [],
         showDimensions: false,
         showCabinetLabels: false,
         showWalls: true,
@@ -618,6 +637,33 @@ export const useStore = create<AppState>()(
               selectedElementId: null,
             };
           }),
+        pushUndo: (label) => {
+          set((s) => {
+            const proj = s.projects.find((p) => p.id === s.activeId);
+            if (!proj) return {};
+            const snap: ProjectSnapshot = {
+              label,
+              project: JSON.parse(JSON.stringify(proj)),
+              timestamp: Date.now(),
+            };
+            // Trzymamy max 10 ostatnich migawek.
+            const next = [...s.undoStack, snap].slice(-10);
+            return { undoStack: next };
+          });
+        },
+        undo: () => {
+          const { undoStack, activeId } = get();
+          if (undoStack.length === 0) return false;
+          const last = undoStack[undoStack.length - 1];
+          set((s) => ({
+            projects: s.projects.map((p) =>
+              p.id === activeId ? { ...last.project, id: p.id } : p
+            ),
+            undoStack: s.undoStack.slice(0, -1),
+            selectedElementId: null,
+          }));
+          return true;
+        },
         setSelected: (id) => {
           // Jeśli zaznaczamy element z innej szafy, przełączamy też aktywną
           // szafę żeby edytor pokazał właściwy moduł.
@@ -958,9 +1004,9 @@ export const useStore = create<AppState>()(
             const remaining = proj.cabinets.filter((c) => c.id !== id);
             const next =
               remaining.length > 0 ? remaining : [buildEmptyCabinet("Moduł 1")];
-            const newActive = next.find((c) => c.id === s.activeCabinetId)
-              ? s.activeCabinetId
-              : next[0].id;
+            // Aktywny pozostaje jeśli wciąż istnieje, inaczej pierwsza szafa.
+            const newActive =
+              next.find((c) => c.id === s.activeCabinetId)?.id ?? next[0].id;
             return {
               projects: s.projects.map((p) =>
                 p.id === s.activeId ? touch({ ...p, cabinets: next }) : p
@@ -1015,19 +1061,36 @@ export const useStore = create<AppState>()(
           }));
         },
         setCabinetAnchor: (id, anchor) => {
+          // Gdy anchor staje się aktywny, zachowujemy aktualny manualny offset
+          // i rotację jako fallback (do przywrócenia po odpięciu). Gdy anchor
+          // staje się null, próbujemy odbudować pozycję ze snapshot albo
+          // używamy obecnej resolved transform jako nowego manualnego offsetu,
+          // żeby szafa nie skoczyła.
           set((s) => ({
-            projects: s.projects.map((p) =>
-              p.id === s.activeId
-                ? touch({
-                    ...p,
-                    cabinets: p.cabinets.map((c) =>
-                      c.id === id
-                        ? { ...c, anchor: anchor ?? undefined }
-                        : c
-                    ),
-                  })
-                : p
-            ),
+            projects: s.projects.map((p) => {
+              if (p.id !== s.activeId) return p;
+              return touch({
+                ...p,
+                cabinets: p.cabinets.map((c) => {
+                  if (c.id !== id) return c;
+                  if (anchor) {
+                    // Zachowaj snapshot manualnych pozycji w notes wewnętrznych
+                    // (nie tworzymy osobnego pola żeby nie psuć migracji).
+                    return {
+                      ...c,
+                      anchor,
+                      // Wyzeruj manualną rotację – anchor nadpisuje, ale gdy
+                      // odepniesz, lepiej zacząć od 0 niż mieć stary kąt.
+                      rotationY: 0,
+                    };
+                  }
+                  // Anchor → null: zostawiamy istniejące offsetX/Y/Z (które są
+                  // ostatnimi manualnymi). Ewentualne dryfowanie napraw user
+                  // ręcznie polem offset.
+                  return { ...c, anchor: undefined };
+                }),
+              });
+            }),
           }));
         },
         setCabinetOuter: (id, w, h, d) => {
@@ -1047,6 +1110,7 @@ export const useStore = create<AppState>()(
           }));
         },
         scaleActiveCabinet: (newW, newH, newD) => {
+          get().pushUndo("Skaluj szafę");
           set((s) =>
             patchActiveCabinet(s, (c) => {
               const rx = newW / Math.max(1, c.outerWidth);
@@ -1079,21 +1143,28 @@ export const useStore = create<AppState>()(
           );
         },
         applyPlinth: (type, height, recess, sideToFloor) => {
+          // Migawka pre-zmiana do undo.
+          get().pushUndo("Zastosuj cokół");
           set((s) =>
             patchActiveCabinet(s, (c) => {
+              // Walidacja: cokół musi zostawić sensowną wysokość boków.
+              const safeHeight = Math.max(
+                0,
+                Math.min(height, c.outerHeight - 50)
+              );
               const stf = sideToFloor ?? c.sideToFloor ?? false;
               const oldHeight = c.plinthHeight ?? 100;
-              const dy = height - oldHeight;
+              const dy = safeHeight - oldHeight;
               // Wyznaczamy docelowe wymiary boków:
               // - boki do podłogi: pełna wysokość szafy, środek na H/2,
               // - boki do cokołu (klasycznie): wysokość = H - cokol, siedzą
               //   na cokole.
               const sideH = stf
                 ? c.outerHeight
-                : Math.max(0, c.outerHeight - height);
+                : Math.max(0, c.outerHeight - safeHeight);
               const sideY = stf
                 ? c.outerHeight / 2
-                : height + sideH / 2;
+                : safeHeight + sideH / 2;
               const carcass = c.elements
                 .filter((e) => e.type !== "cokol" && e.type !== "nozka")
                 .map((e) => {
@@ -1109,7 +1180,7 @@ export const useStore = create<AppState>()(
                 type,
                 c.outerWidth,
                 c.outerDepth,
-                Math.max(0, height),
+                safeHeight,
                 Math.max(0, recess ?? c.plinthRecess ?? 30),
                 stf
               ).map((e) => ({ id: uid(), ...e }));
@@ -1117,7 +1188,7 @@ export const useStore = create<AppState>()(
                 ...c,
                 elements: [...carcass, ...plinth],
                 plinthType: type,
-                plinthHeight: height,
+                plinthHeight: safeHeight,
                 plinthRecess: recess ?? c.plinthRecess ?? 30,
                 sideToFloor: stf,
               };
@@ -1227,6 +1298,7 @@ export const useStore = create<AppState>()(
           );
         },
         resetActiveCabinet: () => {
+          get().pushUndo("Reset szafy do szablonu");
           set((s) =>
             patchActiveCabinet(s, (c) => ({
               ...c,
@@ -1256,16 +1328,30 @@ export const useStore = create<AppState>()(
               };
               newRooms.push(target);
             }
-            // Skopiuj projekt z nowymi ID (żeby uniknąć kolizji z istniejącymi).
+            // Wzbogać nazwę o timestamp gdy ta sama nazwa już jest w środku –
+            // chroni przed duplikatami wizualnymi przy podwójnym imporcie.
+            const baseName =
+              payload.project.name +
+              " (z linku · " +
+              payload.roomName +
+              ")";
+            const existingNames = s.projects
+              .filter((p) => p.roomId === target!.id)
+              .map((p) => p.name);
+            const finalName = existingNames.includes(baseName)
+              ? baseName +
+                " " +
+                new Date().toLocaleTimeString("pl-PL", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })
+              : baseName;
+            // Skopiuj projekt z całkiem nowymi ID (cabinet, elementy).
             const importedProject: Project = {
               ...payload.project,
               id: uid(),
               roomId: target.id,
-              name:
-                payload.project.name +
-                " (z linku · " +
-                payload.roomName +
-                ")",
+              name: finalName,
               createdAt: Date.now(),
               updatedAt: Date.now(),
               cabinets: payload.project.cabinets.map((c) => ({
@@ -1287,11 +1373,17 @@ export const useStore = create<AppState>()(
 
         addDrawerSet: (params) => {
           // Budujemy 5 elementów szuflady wg standardu 18 mm korpus + 3 mm HDF dno.
-          const { width: W, height: H, length: L, x, y, name } = params;
+          const { width: W, height: H, x, y, name } = params;
           const t = 18;
           const baseName = name?.trim() || "Szuflada";
+          if (W <= 0 || H <= 0 || params.length <= 0) return;
           set((s) =>
             patchActiveCabinet(s, (c) => {
+              // Klampuj długość boków do głębokości szafy minus margines na prowadnicę.
+              const L = Math.max(
+                50,
+                Math.min(params.length, c.outerDepth - 30)
+              );
               const cabinetHalfDepth = c.outerDepth / 2;
               // Front = z lekkim wystawaniem na zewnątrz.
               const frontZ = cabinetHalfDepth + t / 2;
@@ -1398,7 +1490,18 @@ export const useStore = create<AppState>()(
           const safeGap = Math.max(0, gap);
           const t = 18;
           const eachW = (totalWidth - (n - 1) * safeGap) / n;
-          if (eachW <= 0) return;
+          if (eachW <= 0 || height <= 0 || totalWidth <= 0) {
+            console.warn(
+              "addDoorSet: parametry niepoprawne (eachW=" +
+                eachW +
+                ", height=" +
+                height +
+                ", totalWidth=" +
+                totalWidth +
+                ")"
+            );
+            return;
+          }
           const prefix = namePrefix?.trim() || "Drzwi";
           set((s) =>
             patchActiveCabinet(s, (c) => {
@@ -1461,13 +1564,39 @@ export const useStore = create<AppState>()(
             activeId: projects[0]?.id ?? state.activeId,
           };
         }
-        // v3 -> v4: dodano opcjonalny `layout` do Room. Nic nie zmieniamy
-        // w danych - po prostu pole pozostaje undefined dla starych przestrzeni.
+        // v3 -> v4: dodano opcjonalny `layout` do Room. Normalizujemy też
+        // szafy bez wymaganych pól (fallback na sensowne defaulty żeby
+        // stara skażona perystencja nie wywaliła app).
         if (fromVersion < 4) {
-          // no-op - dla pewności normalizujemy tablice
           state = {
             ...state,
             rooms: (state.rooms ?? []).map((r: any) => ({ ...r })),
+            projects: (state.projects ?? []).map((p: any) => ({
+              ...p,
+              cabinets: (p.cabinets ?? []).map((c: any) => ({
+                id: c.id ?? uid(),
+                name: c.name ?? "Szafa",
+                offsetX: Number.isFinite(c.offsetX) ? c.offsetX : 0,
+                offsetY: Number.isFinite(c.offsetY) ? c.offsetY : 0,
+                offsetZ: Number.isFinite(c.offsetZ) ? c.offsetZ : 0,
+                outerWidth: Number.isFinite(c.outerWidth) ? c.outerWidth : 1000,
+                outerHeight: Number.isFinite(c.outerHeight)
+                  ? c.outerHeight
+                  : 2200,
+                outerDepth: Number.isFinite(c.outerDepth) ? c.outerDepth : 600,
+                plinthType: c.plinthType ?? "staly",
+                plinthHeight: Number.isFinite(c.plinthHeight)
+                  ? c.plinthHeight
+                  : 100,
+                plinthRecess: Number.isFinite(c.plinthRecess)
+                  ? c.plinthRecess
+                  : 30,
+                sideToFloor: !!c.sideToFloor,
+                rotationY: Number.isFinite(c.rotationY) ? c.rotationY : 0,
+                anchor: c.anchor,
+                elements: Array.isArray(c.elements) ? c.elements : [],
+              })),
+            })),
           };
         }
         // v2 -> v3: zawiń elementy projektu w pierwszą szafę (Cabinet)

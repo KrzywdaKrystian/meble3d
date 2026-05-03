@@ -101,29 +101,17 @@ function CabinetGroup({
 }) {
   const showCabinetLabels = useStore((s) => s.showCabinetLabels);
   const transform = resolveCabinetTransform(cabinet, layout);
+  const ringRadius =
+    (Math.max(cabinet.outerWidth, cabinet.outerDepth) * MM) / 2;
   return (
-    <group
-      position={[
-        transform.position[0] * MM,
-        transform.position[1] * MM,
-        transform.position[2] * MM,
-      ]}
-      rotation={[0, transform.rotationY, 0]}
-    >
-      {/* Lekka „aureola” pod aktywną szafą żeby było widać którą edytujesz */}
+    <>
+      {/* Aureola w world frame – niezależna od rotacji szafy, zawsze leży płasko. */}
       {active && (
         <mesh
-          position={[0, 0.001, 0]}
+          position={[transform.position[0] * MM, 0.001, transform.position[2] * MM]}
           rotation={[-Math.PI / 2, 0, 0]}
         >
-          <ringGeometry
-            args={[
-              (Math.max(cabinet.outerWidth, cabinet.outerDepth) * MM) / 2,
-              (Math.max(cabinet.outerWidth, cabinet.outerDepth) * MM) / 2 +
-                0.04,
-              48,
-            ]}
-          />
+          <ringGeometry args={[ringRadius, ringRadius + 0.04, 48]} />
           <meshBasicMaterial
             color="#3b82f6"
             transparent
@@ -132,6 +120,14 @@ function CabinetGroup({
           />
         </mesh>
       )}
+      <group
+        position={[
+          transform.position[0] * MM,
+          transform.position[1] * MM,
+          transform.position[2] * MM,
+        ]}
+        rotation={[0, transform.rotationY, 0]}
+      >
       {showCabinetLabels && (
         <Html
           position={[0, cabinet.outerHeight * MM + 0.08, 0]}
@@ -157,7 +153,8 @@ function CabinetGroup({
         .map((el) => (
           <ElementMesh key={el.id} el={el} />
         ))}
-    </group>
+      </group>
+    </>
   );
 }
 

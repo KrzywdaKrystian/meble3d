@@ -181,10 +181,37 @@ export function PrintableProject() {
         <h2 className="print-h2">Lista okuć i akcesoriów</h2>
         <p className="print-note">
           Pozycje wyliczone automatycznie z elementów projektu (heurystyka:
-          zawiasy wg wysokości drzwi, prowadnice 1 szt. / front szuflady,
-          podpórki 4 szt. / półka, konfirmaty wg liczby paneli korpusu).
-          Stolarz może uzupełnić listę o pozycje specyficzne.
+          zawiasy wg wysokości drzwi 2/3/4/5/6, prowadnice 1 szt. / front
+          szuflady, podpórki 4 szt. / półka, konfirmaty 8 / korpus + 2 /
+          drzwi-szuflada). Stolarz może uzupełnić listę o pozycje specyficzne.
         </p>
+        <details className="print-hw-cabinet-breakdown">
+          <summary>Rozbicie per szafa (kliknij aby rozwinąć)</summary>
+          {project.cabinets.map((c) => {
+            const items = computeHardwareForProject({
+              ...project,
+              cabinets: [c],
+            });
+            const sub = items.reduce(
+              (s, h) => s + hardwareLineTotal(h),
+              0
+            );
+            if (items.length === 0) return null;
+            return (
+              <div key={c.id} style={{ marginTop: 8 }}>
+                <strong>{c.name}</strong> ·{" "}
+                <span>{formatPLN(sub)}</span>
+                <ul style={{ margin: "4px 0 0 16px", padding: 0 }}>
+                  {items.map((h, i) => (
+                    <li key={i}>
+                      {h.quantity} × {h.name} = {formatPLN(hardwareLineTotal(h))}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })}
+        </details>
         <table className="print-elements-table">
           <thead>
             <tr>

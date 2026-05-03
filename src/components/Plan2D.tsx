@@ -455,6 +455,7 @@ export function Plan2D() {
   const layout = useActiveRoomLayout();
   const activeCabinetId = useStore((s) => s.activeCabinetId);
   const setActiveCabinet = useStore((s) => s.setActiveCabinet);
+  const setSelected = useStore((s) => s.setSelected);
 
   const bounds = useMemo(
     () => computeBounds(project, layout),
@@ -524,7 +525,7 @@ export function Plan2D() {
           width={viewW}
           height={viewH}
           fill="url(#grid-m)"
-          onClick={() => setActiveCabinet("")}
+          onClick={() => setSelected(null)}
         />
 
         {/* Pomieszczenie */}

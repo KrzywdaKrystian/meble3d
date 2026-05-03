@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   useStore,
   useActiveProject,
@@ -12,6 +12,8 @@ import {
   WallSide,
   WALL_LABELS,
 } from "../types";
+import { NumberField } from "./Field";
+import { parseNumber } from "../lib/validation";
 
 const WALL_OPTIONS: WallSide[] = ["N", "E", "S", "W"];
 
@@ -49,6 +51,13 @@ export function RoomProjectPicker({
   const project = useActiveProject();
   const room = useActiveRoom();
   const projectsInRoom = useProjectsInActiveRoom();
+  const [searchQuery, setSearchQuery] = useState("");
+  const filteredProjects =
+    searchQuery.trim().length === 0
+      ? projectsInRoom
+      : projectsInRoom.filter((p) =>
+          p.name.toLowerCase().includes(searchQuery.trim().toLowerCase())
+        );
 
   // Zablokuj scroll body kiedy modal otwarty (lepsze UX na mobile).
   useEffect(() => {
@@ -60,11 +69,15 @@ export function RoomProjectPicker({
     };
   }, [open]);
 
-  // Esc zamyka modal.
+  // Esc zamyka modal (i zatrzymuje propagację, żeby nie wpływał globalnie).
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation();
+        onClose();
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -99,6 +112,9 @@ export function RoomProjectPicker({
       role="dialog"
       aria-modal="true"
       aria-label="Wybór przestrzeni i projektu"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
       <header className="picker-header">
         <button
@@ -189,8 +205,22 @@ export function RoomProjectPicker({
         <div className="form-section-title">
           Projekt w przestrzeni „{room.name}" ({projectsInRoom.length})
         </div>
+        {projectsInRoom.length > 5 && (
+          <div className="form-row">
+            <label className="field">
+              <span className="field-input">
+                <input
+                  type="search"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Filtruj projekty po nazwie…"
+                />
+              </span>
+            </label>
+          </div>
+        )}
         <ul className="elist">
-          {projectsInRoom.map((p) => (
+          {filteredProjects.map((p) => (
             <li
               key={p.id}
               className={
@@ -308,36 +338,18 @@ export function RoomProjectPicker({
   );
 }
 
-function NumField({
-  label,
-  value,
-  onChange,
-  suffix = "mm",
-  min = 0,
-}: {
+// Lokalne aliasy do shared NumberField – zachowujemy stary interfejs
+function NumField(props: {
   label: string;
   value: number;
   onChange: (v: number) => void;
   suffix?: string;
   min?: number;
+  max?: number;
+  error?: string | null;
+  hint?: string;
 }) {
-  return (
-    <label className="field">
-      <span className="field-label">{label}</span>
-      <span className="field-input">
-        <input
-          type="number"
-          inputMode="numeric"
-          value={Number.isFinite(value) ? value : 0}
-          onChange={(e) => {
-            const n = parseFloat(e.target.value);
-            onChange(Number.isFinite(n) ? Math.max(min, n) : min);
-          }}
-        />
-        <span className="suffix">{suffix}</span>
-      </span>
-    </label>
-  );
+  return <NumberField {...props} />;
 }
 
 function wallLength(layout: RoomLayout, side: WallSide): number {
@@ -459,36 +471,56 @@ function OpeningRow({
           </span>
         </label>
       </div>
-      <div className="form-row grid-3">
-        <NumField
-          label="Offset od lewej"
-          value={opening.offset}
-          onChange={(v) => onUpdate({ offset: v })}
-        />
-        <NumField
-          label="Szerokość"
-          value={opening.width}
-          onChange={(v) => onUpdate({ width: Math.max(50, v) })}
-        />
-        <NumField
-          label="Wysokość"
-          value={opening.height}
-          onChange={(v) => onUpdate({ height: Math.max(50, v) })}
-        />
-      </div>
-      <div className="form-row grid-3">
-        <NumField
-          label="Wys. parapetu"
-          value={opening.sillHeight}
-          onChange={(v) => onUpdate({ sillHeight: v })}
-        />
-        <div className="field" />
-        <div className="form-actions">
-          <button className="btn danger btn-sm" onClick={onRemove}>
-            Usuń
-          </button>
-        </div>
-      </div>
+      {(() => {
+        const wl =
+          opening.wall === "N" || opening.wall === "S"
+            ? layout.width
+            : layout.depth;
+        const offsetMax = Math.max(0, wl - opening.width);
+        return (
+          <>
+            <div className="form-row grid-3">
+              <NumField
+                label="Offset od lewej"
+                value={opening.offset}
+                min={0}
+                max={offsetMax}
+                hint={"max " + Math.round(offsetMax) + " mm"}
+                onChange={(v) => onUpdate({ offset: v })}
+              />
+              <NumField
+                label="Szerokość"
+                value={opening.width}
+                min={50}
+                max={Math.max(50, wl - opening.offset)}
+                onChange={(v) => onUpdate({ width: v })}
+              />
+              <NumField
+                label="Wysokość"
+                value={opening.height}
+                min={50}
+                max={Math.max(50, layout.height - opening.sillHeight)}
+                onChange={(v) => onUpdate({ height: v })}
+              />
+            </div>
+            <div className="form-row grid-3">
+              <NumField
+                label="Wys. parapetu"
+                value={opening.sillHeight}
+                min={0}
+                max={Math.max(0, layout.height - opening.height)}
+                onChange={(v) => onUpdate({ sillHeight: v })}
+              />
+              <div className="field" />
+              <div className="form-actions">
+                <button className="btn danger btn-sm" onClick={onRemove}>
+                  Usuń
+                </button>
+              </div>
+            </div>
+          </>
+        );
+      })()}
       {problem && <p className="error-hint">{problem.msg}</p>}
     </div>
   );
@@ -519,23 +551,39 @@ function AlcoveRow({
           </span>
         </label>
       </div>
-      <div className="form-row grid-3">
-        <NumField
-          label="Offset od lewej"
-          value={alcove.offset}
-          onChange={(v) => onUpdate({ offset: v })}
-        />
-        <NumField
-          label="Szerokość"
-          value={alcove.width}
-          onChange={(v) => onUpdate({ width: Math.max(100, v) })}
-        />
-        <NumField
-          label="Głębokość"
-          value={alcove.depth}
-          onChange={(v) => onUpdate({ depth: Math.max(50, v) })}
-        />
-      </div>
+      {(() => {
+        const wl =
+          alcove.wall === "N" || alcove.wall === "S"
+            ? layout.width
+            : layout.depth;
+        const offsetMax = Math.max(0, wl - alcove.width);
+        return (
+          <div className="form-row grid-3">
+            <NumField
+              label="Offset od lewej"
+              value={alcove.offset}
+              min={0}
+              max={offsetMax}
+              hint={"max " + Math.round(offsetMax) + " mm"}
+              onChange={(v) => onUpdate({ offset: v })}
+            />
+            <NumField
+              label="Szerokość"
+              value={alcove.width}
+              min={100}
+              max={Math.max(100, wl - alcove.offset)}
+              onChange={(v) => onUpdate({ width: v })}
+            />
+            <NumField
+              label="Głębokość"
+              value={alcove.depth}
+              min={50}
+              max={2000}
+              onChange={(v) => onUpdate({ depth: v })}
+            />
+          </div>
+        );
+      })()}
       <div className="form-actions">
         <button className="btn danger btn-sm" onClick={onRemove}>
           Usuń
@@ -590,26 +638,32 @@ function RoomLayoutSection({
               <NumField
                 label="Szerokość (X)"
                 value={layout.width}
-                onChange={(v) => onSetLayout({ width: Math.max(500, v) })}
+                min={500}
+                max={50000}
+                onChange={(v) => onSetLayout({ width: v })}
               />
               <NumField
                 label="Głębokość (Z)"
                 value={layout.depth}
-                onChange={(v) => onSetLayout({ depth: Math.max(500, v) })}
+                min={500}
+                max={50000}
+                onChange={(v) => onSetLayout({ depth: v })}
               />
               <NumField
                 label="Wysokość"
                 value={layout.height}
-                onChange={(v) => onSetLayout({ height: Math.max(500, v) })}
+                min={500}
+                max={6000}
+                onChange={(v) => onSetLayout({ height: v })}
               />
             </div>
             <div className="form-row">
               <NumField
                 label="Grubość ścian"
                 value={layout.wallThickness}
-                onChange={(v) =>
-                  onSetLayout({ wallThickness: Math.max(20, v) })
-                }
+                min={20}
+                max={500}
+                onChange={(v) => onSetLayout({ wallThickness: v })}
               />
             </div>
 

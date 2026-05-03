@@ -269,8 +269,21 @@ export function PartsList() {
               roomLayout: room.layout,
               project,
             });
+            // iOS Safari historycznie blokuje clipboard.writeText() poza
+            // user-gesture chains. Próbujemy najpierw API, potem fallback.
+            const fallback = () => {
+              prompt(
+                "Skopiuj poniższy link i wyślij klientowi (długość " +
+                  url.length +
+                  " znaków):",
+                url
+              );
+            };
             try {
-              if (navigator.clipboard?.writeText) {
+              if (
+                navigator.clipboard?.writeText &&
+                window.isSecureContext !== false
+              ) {
                 await navigator.clipboard.writeText(url);
                 alert(
                   "Link skopiowany do schowka.\n\nDługość: " +
@@ -278,10 +291,10 @@ export function PartsList() {
                     ' znaków. Wyślij klientowi – po otwarciu projekt trafi do przestrzeni „Udostępnione (link)".'
                 );
               } else {
-                prompt("Skopiuj poniższy link i wyślij klientowi:", url);
+                fallback();
               }
             } catch {
-              prompt("Skopiuj poniższy link i wyślij klientowi:", url);
+              fallback();
             }
           }}
           title="Wygeneruj link, który otworzy ten projekt na innym urządzeniu"
@@ -431,12 +444,17 @@ export function PartsList() {
               <input
                 type="number"
                 inputMode="numeric"
+                min={0}
+                max={500}
                 value={pricing.marginPercent}
-                onChange={(e) =>
+                onChange={(e) => {
+                  const n = parseFloat(e.target.value);
                   setPricing({
-                    marginPercent: parseFloat(e.target.value) || 0,
-                  })
-                }
+                    marginPercent: Number.isFinite(n)
+                      ? Math.max(0, Math.min(500, n))
+                      : 0,
+                  });
+                }}
               />
             </span>
           </label>
@@ -448,12 +466,17 @@ export function PartsList() {
               <input
                 type="number"
                 inputMode="numeric"
+                min={0}
+                max={50}
                 value={pricing.vatPercent}
-                onChange={(e) =>
+                onChange={(e) => {
+                  const n = parseFloat(e.target.value);
                   setPricing({
-                    vatPercent: parseFloat(e.target.value) || 0,
-                  })
-                }
+                    vatPercent: Number.isFinite(n)
+                      ? Math.max(0, Math.min(50, n))
+                      : 0,
+                  });
+                }}
               />
             </span>
           </label>

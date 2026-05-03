@@ -25,7 +25,9 @@ function projectPanels(project: Project): Panel[] {
       if (el.hidden) continue;
       if (el.type === "nozka" || el.type === "drazek") continue;
       const { width, height } = panelDims(el);
-      for (let i = 0; i < el.quantity; i++) {
+      // Pomijamy zerowe / ujemne panele – CNC nie ma co z tym zrobić.
+      if (width <= 0 || height <= 0) continue;
+      for (let i = 0; i < Math.max(0, Math.floor(el.quantity)); i++) {
         panels.push({
           width,
           height,

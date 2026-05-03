@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Wardrobe3D } from "./components/Wardrobe3D";
 import { Plan2D } from "./components/Plan2D";
 import { ElementEditor } from "./components/ElementEditor";
@@ -37,6 +37,34 @@ export default function App() {
   const setShowFloorOutlineOnly = useStore((s) => s.setShowFloorOutlineOnly);
   const viewMode = useStore((s) => s.viewMode);
   const setViewMode = useStore((s) => s.setViewMode);
+  const undoStack = useStore((s) => s.undoStack);
+  const undo = useStore((s) => s.undo);
+
+  // Skróty klawiaturowe – tylko gdy żaden input nie jest fokusowany.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName)
+      ) {
+        return;
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z") {
+        if (undoStack.length > 0) {
+          e.preventDefault();
+          undo();
+        }
+        return;
+      }
+      if (e.key === "v" || e.key === "V") {
+        // Toggle 3D / 2D
+        setViewMode(viewMode === "3d" ? "2d" : "3d");
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [undoStack.length, undo, viewMode, setViewMode]);
 
   const totalElements = project.cabinets.reduce(
     (s, c) => s + c.elements.length,
@@ -88,6 +116,18 @@ export default function App() {
             >
               {viewMode === "2d" ? "Widok: 2D" : "Widok: 3D"}
             </button>
+            {undoStack.length > 0 && (
+              <button
+                className="canvas-toggle"
+                onClick={() => undo()}
+                title={
+                  "Cofnij: " +
+                  undoStack[undoStack.length - 1].label
+                }
+              >
+                ↶ Cofnij ({undoStack.length})
+              </button>
+            )}
             <button
               className={
                 "canvas-toggle" + (showDimensions ? " active" : "")

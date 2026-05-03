@@ -51,7 +51,8 @@ export function projectPanelsForNesting(project: Project): NestingPanel[] {
       if (el.hidden) continue;
       if (el.type === "nozka" || el.type === "drazek") continue;
       const { width, height } = panelDims(el);
-      for (let i = 0; i < el.quantity; i++) {
+      if (width <= 0 || height <= 0) continue;
+      for (let i = 0; i < Math.max(0, Math.floor(el.quantity)); i++) {
         out.push({
           id: el.id + "-" + i,
           width,
@@ -84,15 +85,42 @@ function shelfPack(
   sheetH: number,
   kerf: number = DEFAULT_KERF
 ): { sheets: PackedSheet[]; unplaced: NestingPanel[] } {
-  const sorted = [...panels].sort((a, b) => b.height - a.height);
+  // Sortujemy po większym wymiarze – tak żeby w pierwszej kolejności kłaść
+  // panele najwyższe (po ewentualnej rotacji) i lepiej wykorzystać arkusz.
+  const sorted = [...panels].sort(
+    (a, b) => Math.max(b.width, b.height) - Math.max(a.width, a.height)
+  );
   const sheets: { shelves: Shelf[]; placed: PlacedPanel[] }[] = [];
   const unplaced: NestingPanel[] = [];
 
-  for (const p of sorted) {
-    if (p.width + kerf * 2 > sheetW || p.height + kerf * 2 > sheetH) {
-      unplaced.push(p);
+  for (const original of sorted) {
+    // Spróbuj orientacji oryginalnej i obróconej; wybierz tę, która lepiej
+    // pasuje do arkusza (mniejsza wysokość preferowana, chyba że niedopuszczalna).
+    const candidates: NestingPanel[] = [];
+    if (
+      original.width + kerf * 2 <= sheetW &&
+      original.height + kerf * 2 <= sheetH
+    ) {
+      candidates.push(original);
+    }
+    if (
+      original.height + kerf * 2 <= sheetW &&
+      original.width + kerf * 2 <= sheetH
+    ) {
+      candidates.push({
+        ...original,
+        width: original.height,
+        height: original.width,
+      });
+    }
+    if (candidates.length === 0) {
+      unplaced.push(original);
       continue;
     }
+    // Wybierz orientację o mniejszej wysokości (efektywniejsze pakowanie półek).
+    candidates.sort((a, b) => a.height - b.height);
+    const p = candidates[0];
+    const rotated = p.width !== original.width || p.height !== original.height;
     let placed = false;
     for (const sheet of sheets) {
       // próbuj zmieścić w istniejącej półce
@@ -115,7 +143,7 @@ function shelfPack(
           ...p,
           x: bestShelf.cursorX + kerf,
           y: bestShelf.y + kerf,
-          rotated: false,
+          rotated,
         });
         bestShelf.cursorX += p.width + kerf * 2;
         placed = true;
@@ -134,7 +162,7 @@ function shelfPack(
           cursorX: p.width + kerf * 2,
         };
         sheet.shelves.push(sh);
-        sheet.placed.push({ ...p, x: kerf, y: lastY + kerf, rotated: false });
+        sheet.placed.push({ ...p, x: kerf, y: lastY + kerf, rotated });
         placed = true;
         break;
       }
@@ -147,7 +175,7 @@ function shelfPack(
         cursorX: p.width + kerf * 2,
       };
       newSheet.shelves.push(sh);
-      newSheet.placed.push({ ...p, x: kerf, y: kerf, rotated: false });
+      newSheet.placed.push({ ...p, x: kerf, y: kerf, rotated });
       sheets.push(newSheet);
     }
   }

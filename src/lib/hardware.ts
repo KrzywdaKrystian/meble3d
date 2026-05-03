@@ -26,12 +26,16 @@ export function computeHardwareForCabinet(cabinet: Cabinet): HardwareItem[] {
     (e) => !e.hidden && e.type === "polka"
   );
 
-  // Zawiasy: 2 dla drzwi do 1000 mm wysokości, 3 do 1700, 4 wyżej.
+  // Zawiasy: 2 dla drzwi do 1000 mm, 3 do 1700, 4 do 2400, 5 do 3000, 6 wyżej.
   let zawiasy = 0;
   for (const d of drzwi) {
-    if (d.height <= 1000) zawiasy += 2 * d.quantity;
-    else if (d.height <= 1700) zawiasy += 3 * d.quantity;
-    else zawiasy += 4 * d.quantity;
+    let perDoor: number;
+    if (d.height <= 1000) perDoor = 2;
+    else if (d.height <= 1700) perDoor = 3;
+    else if (d.height <= 2400) perDoor = 4;
+    else if (d.height <= 3000) perDoor = 5;
+    else perDoor = 6;
+    zawiasy += perDoor * d.quantity;
   }
   if (zawiasy > 0) {
     items.push({
@@ -93,13 +97,23 @@ export function computeHardwareForCabinet(cabinet: Cabinet): HardwareItem[] {
     });
   }
 
-  // Stopy: tylko gdy projekt cokołu wymaga - liczymy z elementów typu nozka.
+  // Stopy: rozpoznajemy typ po nazwie elementu lub materiale (ABS / metal /
+  // regulowana → stopa-regulowana; drewniana / ozdobna → stopa-ozdobna).
   const nozki = cabinet.elements.filter(
     (e) => !e.hidden && e.type === "nozka"
   );
   if (nozki.length > 0) {
-    const reg = nozki.filter((n) => n.material.toLowerCase().includes("regul"));
-    const ozd = nozki.filter((n) => !reg.includes(n));
+    const isOrnamental = (m: string, n: string) => {
+      const t = (m + " " + n).toLowerCase();
+      return (
+        t.includes("ozdob") ||
+        t.includes("drewn") ||
+        t.includes("dębow") ||
+        t.includes("decor")
+      );
+    };
+    const reg = nozki.filter((n) => !isOrnamental(n.material, n.name));
+    const ozd = nozki.filter((n) => isOrnamental(n.material, n.name));
     if (reg.length > 0) {
       items.push({
         kind: "stopa-regulowana",
@@ -120,13 +134,19 @@ export function computeHardwareForCabinet(cabinet: Cabinet): HardwareItem[] {
     }
   }
 
-  // Konfirmaty: heurystyka 8 na typowy korpus + 4 na każde drzwi/szufladę.
-  const korpusElements = cabinet.elements.filter(
-    (e) =>
-      !e.hidden &&
-      (e.type === "bok" || e.type === "wieniec" || e.type === "polka")
-  ).length;
-  const konfirmaty = korpusElements * 4 + drzwi.length * 2 + fronty.length * 2;
+  // Konfirmaty: 8 na korpus szafy + 4 na każde dodatkowe drzwi/front szuflady
+  // (montaż zawiasów / prowadnic). Nie liczymy paneli korpusu wprost, bo
+  // kreatory szuflad zwiększają ich liczbę bez realnego wzrostu konfirmatów.
+  const baseKorpus =
+    cabinet.elements.some(
+      (e) => !e.hidden && (e.type === "bok" || e.type === "wieniec")
+    )
+      ? 8
+      : 0;
+  const konfirmaty =
+    baseKorpus +
+    drzwi.reduce((s, d) => s + d.quantity * 2, 0) +
+    fronty.reduce((s, f) => s + f.quantity * 2, 0);
   if (konfirmaty > 0) {
     items.push({
       kind: "konfirmat",
