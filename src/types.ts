@@ -29,6 +29,10 @@ export interface WardrobeElement {
   quantity: number;
   notes?: string;
   hidden?: boolean;
+  /** Obrót elementu w stopniach wokół osi X / Y / Z (środek = środek elementu). */
+  rotationX?: number;
+  rotationY?: number;
+  rotationZ?: number;
 }
 
 /**

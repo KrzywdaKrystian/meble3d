@@ -28,9 +28,17 @@ function ElementMesh({ el }: { el: WardrobeElement }) {
     };
   }, [boxGeom, edgesGeom]);
 
+  const deg = Math.PI / 180;
+  const rotation: [number, number, number] = [
+    (el.rotationX ?? 0) * deg,
+    (el.rotationY ?? 0) * deg,
+    (el.rotationZ ?? 0) * deg,
+  ];
+
   return (
     <group
       position={[el.x * MM, el.y * MM, el.z * MM]}
+      rotation={rotation}
       onClick={(e) => {
         e.stopPropagation();
         setSelected(el.id);

@@ -123,6 +123,41 @@ function ElementForm({ el }: { el: WardrobeElement }) {
         <NumberField label="Z (przód)" value={el.z} onChange={(v) => u({ z: v })} />
       </div>
 
+      <div className="form-section-title">Obrót (stopnie, wokół środka elementu)</div>
+      <div className="form-row grid-3">
+        <NumberField
+          label="Wokół X (przechył)"
+          value={el.rotationX ?? 0}
+          onChange={(v) => u({ rotationX: v })}
+          suffix="°"
+        />
+        <NumberField
+          label="Wokół Y (obrót pionowy)"
+          value={el.rotationY ?? 0}
+          onChange={(v) => u({ rotationY: v })}
+          suffix="°"
+        />
+        <NumberField
+          label="Wokół Z (przechył boczny)"
+          value={el.rotationZ ?? 0}
+          onChange={(v) => u({ rotationZ: v })}
+          suffix="°"
+        />
+      </div>
+      {(el.rotationX || el.rotationY || el.rotationZ) ? (
+        <div className="form-actions">
+          <button
+            className="btn ghost btn-sm"
+            onClick={() =>
+              u({ rotationX: 0, rotationY: 0, rotationZ: 0 })
+            }
+            title="Wyzeruj obrót elementu"
+          >
+            Wyzeruj obrót
+          </button>
+        </div>
+      ) : null}
+
       <div className="form-section-title">Materiał</div>
       <div className="form-row">
         <label className="field">
