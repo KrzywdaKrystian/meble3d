@@ -98,30 +98,31 @@ export function RoomProjectPicker({
       </header>
 
       <div className="picker-body">
-        <div className="form-section-title">Pokój</div>
+        <div className="picker-room-select">
+          <label className="field">
+            <span className="field-label">Wybierz pokój</span>
+            <span className="field-input">
+              <select
+                value={activeRoomId}
+                onChange={(e) => setActiveRoom(e.target.value)}
+              >
+                {rooms.map((r) => {
+                  const count = projects.filter(
+                    (p) => p.roomId === r.id
+                  ).length;
+                  return (
+                    <option key={r.id} value={r.id}>
+                      {r.name} ({count} projektów)
+                    </option>
+                  );
+                })}
+              </select>
+            </span>
+          </label>
+        </div>
+
+        <div className="form-section-title">Pokój „{room.name}"</div>
         <div className="form">
-          <div className="form-row">
-            <label className="field">
-              <span className="field-label">Aktywny pokój</span>
-              <span className="field-input">
-                <select
-                  value={activeRoomId}
-                  onChange={(e) => setActiveRoom(e.target.value)}
-                >
-                  {rooms.map((r) => {
-                    const count = projects.filter(
-                      (p) => p.roomId === r.id
-                    ).length;
-                    return (
-                      <option key={r.id} value={r.id}>
-                        {r.name} ({count})
-                      </option>
-                    );
-                  })}
-                </select>
-              </span>
-            </label>
-          </div>
           <div className="form-row">
             <label className="field">
               <span className="field-label">Nazwa pokoju</span>
@@ -263,46 +264,6 @@ export function RoomProjectPicker({
               </span>
             </li>
           ))}
-        </ul>
-
-        <div className="form-section-title">Wszystkie pokoje</div>
-        <ul className="elist">
-          {rooms.map((r) => {
-            const inside = projects.filter((p) => p.roomId === r.id);
-            return (
-              <li
-                key={r.id}
-                className={
-                  "elist-item" + (r.id === activeRoomId ? " active" : "")
-                }
-                onClick={() => setActiveRoom(r.id)}
-              >
-                <span
-                  className="elist-color"
-                  style={{
-                    background:
-                      r.id === activeRoomId ? "#3b82f6" : "#475569",
-                  }}
-                />
-                <span className="elist-name">
-                  <strong>{r.name}</strong>
-                  <small>
-                    {inside.length} projektów ·{" "}
-                    {inside.reduce(
-                      (s, p) =>
-                        s +
-                        p.cabinets.reduce(
-                          (cs, c) => cs + c.elements.length,
-                          0
-                        ),
-                      0
-                    )}{" "}
-                    elementów łącznie
-                  </small>
-                </span>
-              </li>
-            );
-          })}
         </ul>
       </div>
     </div>
