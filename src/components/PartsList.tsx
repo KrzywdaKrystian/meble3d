@@ -7,6 +7,7 @@ import {
   hardwareSubtotal,
 } from "../lib/hardware";
 import { buildQuote, formatPLN } from "../lib/pricing";
+import { buildProjectDxf } from "../lib/dxf";
 
 interface SourceElement {
   el: WardrobeElement;
@@ -225,6 +226,20 @@ export function PartsList() {
         </button>
         <button className="btn ghost" onClick={exportCsv}>
           Pobierz CSV
+        </button>
+        <button
+          className="btn ghost"
+          onClick={() => {
+            const dxf = buildProjectDxf(project);
+            const safe = (project.name || "projekt").replace(
+              /[^\w\-]+/g,
+              "_"
+            );
+            downloadFile(safe + "_panele.dxf", dxf, "application/dxf");
+          }}
+          title="Eksport paneli do DXF (CAD / CNC)"
+        >
+          Pobierz DXF
         </button>
       </div>
 
