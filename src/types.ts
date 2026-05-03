@@ -136,6 +136,168 @@ export const WALL_LABELS: Record<WallSide, string> = {
   E: "Prawa",
 };
 
+/**
+ * Biblioteka materiałów płytowych / okleinowych. Każda pozycja ma swoją
+ * cenę za m² (płyta) lub za mb (okleina). Stosowane do wyceny.
+ */
+export interface MaterialPreset {
+  id: string;
+  name: string;
+  thickness: number;
+  /** "plyta" – cena za m²; "okleina" – cena za mb; "akcesoria" – cena za szt. */
+  unit: "plyta" | "okleina" | "akcesoria";
+  pricePerUnit: number;
+  /** Skrócona nota dla stolarza (np. kolor, kod producenta). */
+  note?: string;
+}
+
+export const DEFAULT_MATERIALS: MaterialPreset[] = [
+  {
+    id: "egger-h1180-18",
+    name: "Egger H1180 ST37 Sonoma jasna",
+    thickness: 18,
+    unit: "plyta",
+    pricePerUnit: 95,
+    note: "Płyta wiórowa laminowana 18 mm",
+  },
+  {
+    id: "egger-w1000-18",
+    name: "Egger W1000 ST9 Premium biała",
+    thickness: 18,
+    unit: "plyta",
+    pricePerUnit: 110,
+    note: "Płyta wiórowa laminowana 18 mm",
+  },
+  {
+    id: "kronopol-k001-18",
+    name: "Kronopol K001 Białe Premium",
+    thickness: 18,
+    unit: "plyta",
+    pricePerUnit: 90,
+    note: "Płyta wiórowa laminowana 18 mm",
+  },
+  {
+    id: "pfleiderer-r4262-18",
+    name: "Pfleiderer R4262 Dąb sonoma",
+    thickness: 18,
+    unit: "plyta",
+    pricePerUnit: 100,
+    note: "Płyta laminowana 18 mm",
+  },
+  {
+    id: "hdf-3-bialy",
+    name: "HDF biały 3 mm",
+    thickness: 3,
+    unit: "plyta",
+    pricePerUnit: 35,
+    note: "Plecy, dna szuflad",
+  },
+  {
+    id: "rurka-25-chrom",
+    name: "Rurka chromowana Ø25 mm",
+    thickness: 25,
+    unit: "okleina",
+    pricePerUnit: 18,
+    note: "Drążek na ubrania",
+  },
+  {
+    id: "abs-2-bialy",
+    name: "Okleina ABS 2 mm biała",
+    thickness: 2,
+    unit: "okleina",
+    pricePerUnit: 4,
+    note: "Krawędzie widoczne",
+  },
+  {
+    id: "abs-1-bialy",
+    name: "Okleina ABS 1 mm biała",
+    thickness: 1,
+    unit: "okleina",
+    pricePerUnit: 2.5,
+    note: "Krawędzie wewnętrzne",
+  },
+];
+
+/**
+ * Typy okuć / akcesoriów które dolatują do listy zakupowej automatycznie
+ * na podstawie elementów szafy.
+ */
+export type HardwareKind =
+  | "zawias"
+  | "prowadnica-szuflady"
+  | "uchwyt-meblowy"
+  | "wieszak-drazek"
+  | "kolek"
+  | "konfirmat"
+  | "ekscentr"
+  | "stopa-regulowana"
+  | "stopa-ozdobna"
+  | "wkret"
+  | "inne";
+
+export const HARDWARE_LABELS: Record<HardwareKind, string> = {
+  zawias: "Zawias puszkowy 35 mm",
+  "prowadnica-szuflady": "Prowadnica szuflady",
+  "uchwyt-meblowy": "Uchwyt meblowy",
+  "wieszak-drazek": "Wieszak drążka (komplet)",
+  kolek: "Kołek montażowy 8 mm",
+  konfirmat: "Konfirmat 7 × 50",
+  ekscentr: "Ekscentr + kołek",
+  "stopa-regulowana": "Stopa regulowana ABS / metal",
+  "stopa-ozdobna": "Stopa ozdobna drewniana",
+  wkret: "Wkręt 3,5 × 16",
+  inne: "Inne",
+};
+
+export interface HardwareItem {
+  kind: HardwareKind;
+  /** Nazwa robocza (np. „Zawias do drzwi lewych"). */
+  name: string;
+  quantity: number;
+  pricePerUnit: number;
+  notes?: string;
+  /** Z którego elementu / szafy pochodzi pozycja (informacyjnie). */
+  sourceCabinetName?: string;
+}
+
+export const DEFAULT_HARDWARE_PRICES: Record<HardwareKind, number> = {
+  zawias: 4.5,
+  "prowadnica-szuflady": 35,
+  "uchwyt-meblowy": 8,
+  "wieszak-drazek": 12,
+  kolek: 0.2,
+  konfirmat: 0.5,
+  ekscentr: 1.2,
+  "stopa-regulowana": 6,
+  "stopa-ozdobna": 25,
+  wkret: 0.1,
+  inne: 0,
+};
+
+/** Globalne ustawienia wyceny dla projektu / przestrzeni. */
+export interface PricingSettings {
+  /** Wymiar standardowej płyty roboczej w mm (do estymacji % odpadu). */
+  sheetWidth: number;
+  sheetHeight: number;
+  /** Cena netto za m² płyty głównej (gdy element nie ma własnego materiału). */
+  defaultBoardPricePerM2: number;
+  /** Marża stolarza (%). */
+  marginPercent: number;
+  /** Stawka VAT (%). */
+  vatPercent: number;
+  /** Robocizna ryczałtowa per szafa (PLN). */
+  laborPerCabinet: number;
+}
+
+export const DEFAULT_PRICING: PricingSettings = {
+  sheetWidth: 2800,
+  sheetHeight: 2070,
+  defaultBoardPricePerM2: 95,
+  marginPercent: 30,
+  vatPercent: 23,
+  laborPerCabinet: 250,
+};
+
 export interface RoomOpening {
   id: string;
   wall: WallSide;

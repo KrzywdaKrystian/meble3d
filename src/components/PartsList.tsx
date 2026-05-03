@@ -1,6 +1,12 @@
 import { useMemo, useState } from "react";
-import { useActiveProject } from "../store";
+import { useActiveProject, useStore } from "../store";
 import { ELEMENT_LABELS, WardrobeElement } from "../types";
+import {
+  computeHardwareForProject,
+  hardwareLineTotal,
+  hardwareSubtotal,
+} from "../lib/hardware";
+import { buildQuote, formatPLN } from "../lib/pricing";
 
 interface SourceElement {
   el: WardrobeElement;
@@ -83,7 +89,19 @@ function downloadFile(name: string, content: string, mime: string) {
 
 export function PartsList() {
   const project = useActiveProject();
+  const pricing = useStore((s) => s.pricing);
+  const setPricing = useStore((s) => s.setPricing);
   const [scope, setScope] = useState<"all" | string>("all");
+
+  const hardware = useMemo(
+    () => computeHardwareForProject(project),
+    [project]
+  );
+  const hardwareSum = hardwareSubtotal(hardware);
+  const quote = useMemo(
+    () => buildQuote(project, pricing),
+    [project, pricing]
+  );
 
   const cabinetsForScope = useMemo(() => {
     if (scope === "all") return project.cabinets;
@@ -162,7 +180,7 @@ export function PartsList() {
   return (
     <div className="panel-content">
       {project.cabinets.length > 1 && (
-        <div className="form">
+        <div className="form no-print">
           <div className="form-row">
             <label className="field">
               <span className="field-label">Zakres listy</span>
@@ -202,12 +220,203 @@ export function PartsList() {
       </div>
 
       <div className="parts-actions no-print">
-        <button className="btn primary" onClick={exportCsv}>
+        <button className="btn primary" onClick={printList}>
+          Eksport PDF (drukuj)
+        </button>
+        <button className="btn ghost" onClick={exportCsv}>
           Pobierz CSV
         </button>
-        <button className="btn ghost" onClick={printList}>
-          Drukuj / PDF
-        </button>
+      </div>
+
+      <div className="form-section-title no-print">Lista okuć (auto)</div>
+      <div className="parts-table-wrap no-print">
+        <table className="parts-table">
+          <thead>
+            <tr>
+              <th>Pozycja</th>
+              <th>Sztuk</th>
+              <th>Cena</th>
+              <th className="hide-mobile">Wartość</th>
+            </tr>
+          </thead>
+          <tbody>
+            {hardware.map((h, i) => (
+              <tr key={h.kind + i}>
+                <td>
+                  <strong>{h.name}</strong>
+                  {h.sourceCabinetName && (
+                    <>
+                      <br />
+                      <small>{h.sourceCabinetName}</small>
+                    </>
+                  )}
+                </td>
+                <td className="num">{h.quantity}</td>
+                <td>{formatPLN(h.pricePerUnit)}</td>
+                <td className="hide-mobile">
+                  {formatPLN(hardwareLineTotal(h))}
+                </td>
+              </tr>
+            ))}
+            {hardware.length === 0 && (
+              <tr>
+                <td colSpan={4} className="empty">
+                  Brak okuć – dodaj drzwi, szuflady lub półki w szafach.
+                </td>
+              </tr>
+            )}
+            <tr>
+              <td colSpan={3} style={{ textAlign: "right", fontWeight: 600 }}>
+                Razem:
+              </td>
+              <td className="num hide-mobile">{formatPLN(hardwareSum)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div className="form-section-title no-print">Wycena projektu</div>
+      <div className="form no-print">
+        <div className="form-row grid-3">
+          <label className="field">
+            <span className="field-label">Płyta [PLN/m²]</span>
+            <span className="field-input">
+              <input
+                type="number"
+                inputMode="numeric"
+                value={pricing.defaultBoardPricePerM2}
+                onChange={(e) =>
+                  setPricing({
+                    defaultBoardPricePerM2:
+                      parseFloat(e.target.value) || 0,
+                  })
+                }
+              />
+            </span>
+          </label>
+          <label className="field">
+            <span className="field-label">Robocizna / szafa</span>
+            <span className="field-input">
+              <input
+                type="number"
+                inputMode="numeric"
+                value={pricing.laborPerCabinet}
+                onChange={(e) =>
+                  setPricing({
+                    laborPerCabinet: parseFloat(e.target.value) || 0,
+                  })
+                }
+              />
+            </span>
+          </label>
+          <label className="field">
+            <span className="field-label">Marża [%]</span>
+            <span className="field-input">
+              <input
+                type="number"
+                inputMode="numeric"
+                value={pricing.marginPercent}
+                onChange={(e) =>
+                  setPricing({
+                    marginPercent: parseFloat(e.target.value) || 0,
+                  })
+                }
+              />
+            </span>
+          </label>
+        </div>
+        <div className="form-row grid-3">
+          <label className="field">
+            <span className="field-label">VAT [%]</span>
+            <span className="field-input">
+              <input
+                type="number"
+                inputMode="numeric"
+                value={pricing.vatPercent}
+                onChange={(e) =>
+                  setPricing({
+                    vatPercent: parseFloat(e.target.value) || 0,
+                  })
+                }
+              />
+            </span>
+          </label>
+          <label className="field">
+            <span className="field-label">Płyta szer. [mm]</span>
+            <span className="field-input">
+              <input
+                type="number"
+                inputMode="numeric"
+                value={pricing.sheetWidth}
+                onChange={(e) =>
+                  setPricing({
+                    sheetWidth: parseFloat(e.target.value) || 0,
+                  })
+                }
+              />
+            </span>
+          </label>
+          <label className="field">
+            <span className="field-label">Płyta wys. [mm]</span>
+            <span className="field-input">
+              <input
+                type="number"
+                inputMode="numeric"
+                value={pricing.sheetHeight}
+                onChange={(e) =>
+                  setPricing({
+                    sheetHeight: parseFloat(e.target.value) || 0,
+                  })
+                }
+              />
+            </span>
+          </label>
+        </div>
+      </div>
+
+      <div className="parts-table-wrap no-print">
+        <table className="parts-table">
+          <tbody>
+            <tr>
+              <td>Płyta ({quote.boardAreaM2.toFixed(2)} m², {quote.sheetCount} szt.)</td>
+              <td className="num">{formatPLN(quote.boardCost)}</td>
+            </tr>
+            <tr>
+              <td>Okucia</td>
+              <td className="num">{formatPLN(quote.hardwareCost)}</td>
+            </tr>
+            <tr>
+              <td>Robocizna ({project.cabinets.length} szafy)</td>
+              <td className="num">{formatPLN(quote.laborCost)}</td>
+            </tr>
+            <tr>
+              <td>Marża {pricing.marginPercent}%</td>
+              <td className="num">{formatPLN(quote.margin)}</td>
+            </tr>
+            <tr>
+              <td>
+                <strong>Netto</strong>
+              </td>
+              <td className="num">
+                <strong>{formatPLN(quote.net)}</strong>
+              </td>
+            </tr>
+            <tr>
+              <td>VAT {pricing.vatPercent}%</td>
+              <td className="num">{formatPLN(quote.vat)}</td>
+            </tr>
+            <tr>
+              <td>
+                <strong>Brutto</strong>
+              </td>
+              <td className="num">
+                <strong style={{ fontSize: 16 }}>
+                  {formatPLN(quote.total)}
+                </strong>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
 
       <div className="parts-table-wrap">

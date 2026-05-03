@@ -3,7 +3,12 @@ import {
   useActiveProject,
   useActiveCabinet,
 } from "../store";
-import { ELEMENT_LABELS, ElementType, WardrobeElement } from "../types";
+import {
+  DEFAULT_MATERIALS,
+  ELEMENT_LABELS,
+  ElementType,
+  WardrobeElement,
+} from "../types";
 
 const TYPES: ElementType[] = [
   "bok",
@@ -161,13 +166,36 @@ function ElementForm({ el }: { el: WardrobeElement }) {
       <div className="form-section-title">Materiał</div>
       <div className="form-row">
         <label className="field">
-          <span className="field-label">Opis materiału</span>
+          <span className="field-label">
+            Opis materiału (lub wybierz z biblioteki)
+          </span>
           <span className="field-input">
             <input
               type="text"
+              list="material-presets"
               value={el.material}
-              onChange={(e) => u({ material: e.target.value })}
+              onChange={(e) => {
+                const value = e.target.value;
+                const preset = DEFAULT_MATERIALS.find(
+                  (m) => m.name === value
+                );
+                if (preset) {
+                  u({
+                    material: preset.name,
+                    thickness: preset.thickness,
+                  });
+                } else {
+                  u({ material: value });
+                }
+              }}
             />
+            <datalist id="material-presets">
+              {DEFAULT_MATERIALS.map((m) => (
+                <option key={m.id} value={m.name}>
+                  {m.note ?? ""} ({m.thickness} mm)
+                </option>
+              ))}
+            </datalist>
           </span>
         </label>
       </div>

@@ -3,10 +3,12 @@ import { persist } from "zustand/middleware";
 import {
   Cabinet,
   CabinetAnchor,
+  DEFAULT_PRICING,
   ELEMENT_DEFAULT_COLOR,
   ELEMENT_DEFAULT_THICKNESS,
   ELEMENT_LABELS,
   PlinthType,
+  PricingSettings,
   Project,
   Room,
   RoomAlcove,
@@ -465,6 +467,8 @@ interface AppState {
   showFloorOutlineOnly: boolean;
   /** Tryb widoku: 3D scena lub 2D rzut z góry. */
   viewMode: "3d" | "2d";
+  /** Ustawienia wyceny dla wszystkich projektów (proste, globalne). */
+  pricing: PricingSettings;
 
   // Layout pomieszczenia
   toggleRoomLayout: (roomId: string, enabled: boolean) => void;
@@ -492,6 +496,7 @@ interface AppState {
   setShowWalls: (v: boolean) => void;
   setShowFloorOutlineOnly: (v: boolean) => void;
   setViewMode: (m: "3d" | "2d") => void;
+  setPricing: (patch: Partial<PricingSettings>) => void;
   setActiveRoom: (roomId: string) => void;
   addRoom: (name?: string) => void;
   renameRoom: (id: string, name: string) => void;
@@ -573,6 +578,7 @@ export const useStore = create<AppState>()(
         showWalls: true,
         showFloorOutlineOnly: false,
         viewMode: "3d",
+        pricing: { ...DEFAULT_PRICING },
 
         setActive: (id) =>
           set((s) => {
@@ -607,6 +613,8 @@ export const useStore = create<AppState>()(
         setShowWalls: (v) => set({ showWalls: v }),
         setShowFloorOutlineOnly: (v) => set({ showFloorOutlineOnly: v }),
         setViewMode: (m) => set({ viewMode: m }),
+        setPricing: (patch) =>
+          set((s) => ({ pricing: { ...s.pricing, ...patch } })),
 
         toggleRoomLayout: (roomId, enabled) =>
           set((s) => ({

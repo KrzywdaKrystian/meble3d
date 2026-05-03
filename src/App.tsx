@@ -5,6 +5,7 @@ import { ElementEditor } from "./components/ElementEditor";
 import { PartsList } from "./components/PartsList";
 import { ProjectPanel } from "./components/ProjectPanel";
 import { RoomProjectPicker } from "./components/RoomProjectPicker";
+import { PrintableProject } from "./components/PrintableProject";
 import {
   useActiveProject,
   useActiveRoom,
@@ -176,11 +177,10 @@ export default function App() {
         onClose={() => setPickerOpen(false)}
       />
 
-      {/* Wersja drukowana */}
-      <section className="print-only">
-        <h1>Lista elementów – {project.name}</h1>
-        <PartsList />
-      </section>
+      {/* Wersja drukowana / PDF */}
+      <div className="print-only">
+        <PrintableProject />
+      </div>
     </div>
   );
 }

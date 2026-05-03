@@ -1006,47 +1006,260 @@ textarea {
 }
 
 @media print {
+  @page {
+    size: A4;
+    margin: 12mm 14mm;
+  }
+
   .no-print {
     display: none !important;
   }
-  .print-only {
-    display: block;
-    padding: 12px 18px;
-    color: #000;
-    background: #fff;
-  }
+
   body,
-  html,
-  .app {
+  html {
     background: #fff !important;
     color: #000 !important;
     height: auto !important;
     overflow: visible !important;
+    font-family: "Helvetica", "Arial", sans-serif;
+    font-size: 10pt;
   }
-  .panel-body,
-  .panel,
+
+  .app,
   .main,
-  .app {
-    overflow: visible !important;
-    display: block !important;
-  }
-  .canvas-wrap {
+  .topbar,
+  .panel {
     display: none !important;
   }
-  .parts-table th,
-  .parts-table td {
-    color: #000;
-    border-color: #999 !important;
-  }
-  .parts-table th {
-    background: #eee !important;
-  }
-  .parts-summary > div,
-  .parts-table-wrap {
+
+  .print-only {
+    display: block !important;
     background: #fff;
-    border-color: #999;
+    color: #000;
   }
-  .metric-label {
-    color: #555;
+
+  .printable {
+    color: #000;
+  }
+
+  .print-page {
+    page-break-after: always;
+    break-after: page;
+  }
+  .print-page:last-child {
+    page-break-after: auto;
+    break-after: auto;
+  }
+
+  /* Title page */
+  .print-title-page {
+    text-align: left;
+    padding-top: 30mm;
+  }
+  .print-title-mark {
+    font-size: 16pt;
+    font-weight: 700;
+    letter-spacing: 1pt;
+    color: #2563eb;
+    border: 2pt solid #2563eb;
+    display: inline-block;
+    padding: 4mm 6mm;
+    border-radius: 2mm;
+  }
+  .print-h1 {
+    font-size: 28pt;
+    margin: 12mm 0 4mm 0;
+    font-weight: 700;
+    color: #0f172a;
+  }
+  .print-h2 {
+    font-size: 16pt;
+    margin: 0 0 6mm 0;
+    color: #0f172a;
+    border-bottom: 1pt solid #cbd5e1;
+    padding-bottom: 2mm;
+  }
+  .print-subtitle {
+    font-size: 13pt;
+    color: #475569;
+    margin-bottom: 14mm;
+  }
+  .print-meta {
+    margin: 0;
+    display: grid;
+    grid-template-columns: 70mm 1fr;
+    column-gap: 6mm;
+    row-gap: 2mm;
+    font-size: 11pt;
+  }
+  .print-meta dt {
+    font-weight: 600;
+    color: #475569;
+  }
+  .print-meta dd {
+    margin: 0;
+    color: #0f172a;
+  }
+
+  /* Plan 2D w druku */
+  .print-plan-page .plan2d-wrap {
+    position: relative !important;
+    inset: auto !important;
+    width: 100% !important;
+    height: 230mm !important;
+    background: #fff !important;
+  }
+  .print-plan-page .plan2d-svg {
+    background: #fff !important;
+  }
+  .print-plan-page .plan2d-legend {
+    position: absolute;
+    bottom: 2mm;
+    color: #475569;
+    background: rgba(255, 255, 255, 0.9);
+  }
+
+  /* Cabinet pages */
+  .print-cabinet-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4mm 8mm;
+    font-size: 10pt;
+    color: #0f172a;
+    margin-bottom: 6mm;
+    padding-bottom: 3mm;
+    border-bottom: 0.5pt solid #cbd5e1;
+  }
+  .tdrawings-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 5mm;
+    margin-bottom: 6mm;
+  }
+  .tdrawing-view {
+    border: 0.5pt solid #94a3b8;
+    padding: 3mm;
+    background: #fff;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  .tdrawing-title {
+    font-weight: 600;
+    font-size: 10pt;
+    margin-bottom: 2mm;
+    color: #0f172a;
+  }
+  .tdrawing-svg {
+    width: 100%;
+    height: auto;
+    max-height: 90mm;
+    display: block;
+  }
+  .tdrawings-legend {
+    grid-column: 1 / -1;
+    font-size: 9pt;
+    color: #475569;
+  }
+
+  .print-elements-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9pt;
+  }
+  .print-elements-table th,
+  .print-elements-table td {
+    border: 0.4pt solid #94a3b8;
+    padding: 1.5mm 2mm;
+    text-align: left;
+    vertical-align: top;
+  }
+  .print-elements-table th {
+    background: #f1f5f9;
+    font-weight: 600;
+    color: #0f172a;
+  }
+  .print-empty {
+    text-align: center;
+    color: #64748b;
+    padding: 4mm !important;
+  }
+
+  /* Parts list (zsumowana) na końcu */
+  .print-parts-page .panel-content {
+    padding: 0;
+  }
+  .print-parts-page .parts-summary {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4mm;
+    margin-bottom: 5mm;
+  }
+  .print-parts-page .parts-summary > div {
+    background: #f1f5f9 !important;
+    border: 0.4pt solid #94a3b8 !important;
+    padding: 3mm;
+    text-align: center;
+    color: #0f172a;
+  }
+  .print-parts-page .metric-label {
+    color: #475569 !important;
+    font-size: 8pt;
+  }
+  .print-parts-page .metric-value {
+    font-size: 14pt;
+    color: #0f172a;
+  }
+  .print-parts-page .parts-table {
+    font-size: 9pt;
+  }
+  .print-parts-page .parts-table th,
+  .print-parts-page .parts-table td {
+    color: #0f172a !important;
+    border-color: #94a3b8 !important;
+    padding: 1.5mm 2mm;
+  }
+  .print-parts-page .parts-table th {
+    background: #f1f5f9 !important;
+  }
+  .print-parts-page .parts-table-wrap {
+    background: #fff !important;
+    border-color: #94a3b8 !important;
+  }
+  .print-parts-page .hide-mobile {
+    display: table-cell !important;
+  }
+
+  /* Hardware / quote tables */
+  .print-note {
+    font-size: 9pt;
+    color: #475569;
+    margin: 0 0 4mm 0;
+  }
+  .print-quote-table {
+    width: 70%;
+    border-collapse: collapse;
+    font-size: 11pt;
+  }
+  .print-quote-table td {
+    padding: 2mm 3mm;
+    border-bottom: 0.4pt solid #cbd5e1;
+  }
+  .print-quote-table td:last-child {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .print-quote-table .print-quote-subtotal td {
+    font-weight: 600;
+    border-top: 0.5pt solid #94a3b8;
+    background: #f8fafc;
+  }
+  .print-quote-table .print-quote-net td {
+    font-weight: 600;
+  }
+  .print-quote-table .print-quote-total td {
+    font-size: 14pt;
+    font-weight: 700;
+    border-top: 1pt solid #0f172a;
+    background: #f1f5f9;
   }
 }
