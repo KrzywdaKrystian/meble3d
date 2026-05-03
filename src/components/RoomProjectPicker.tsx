@@ -155,10 +155,42 @@ export function RoomProjectPicker({
         <div className="form-section-title">
           Projekt w przestrzeni „{room.name}" ({projectsInRoom.length})
         </div>
+        <ul className="elist">
+          {projectsInRoom.map((p) => (
+            <li
+              key={p.id}
+              className={
+                "elist-item" + (p.id === activeId ? " active" : "")
+              }
+              onClick={() => {
+                setActive(p.id);
+                onClose();
+              }}
+            >
+              <span
+                className="elist-color"
+                style={{
+                  background: p.id === activeId ? "#3b82f6" : "#475569",
+                }}
+              />
+              <span className="elist-name">
+                <strong>{p.name}</strong>
+                <small>
+                  {p.cabinets.length} szaf ·{" "}
+                  {p.cabinets.reduce((s, c) => s + c.elements.length, 0)}{" "}
+                  elementów ·{" "}
+                  {new Date(p.updatedAt).toLocaleDateString("pl-PL")}
+                </small>
+              </span>
+            </li>
+          ))}
+        </ul>
+
+        <div className="form-section-title">Aktywny projekt</div>
         <div className="form">
           <div className="form-row">
             <label className="field">
-              <span className="field-label">Aktywny projekt</span>
+              <span className="field-label">Wybierz projekt</span>
               <span className="field-input">
                 <select
                   value={activeId}
@@ -237,37 +269,6 @@ export function RoomProjectPicker({
             </button>
           </div>
         </div>
-
-        <ul className="elist">
-          {projectsInRoom.map((p) => (
-            <li
-              key={p.id}
-              className={
-                "elist-item" + (p.id === activeId ? " active" : "")
-              }
-              onClick={() => {
-                setActive(p.id);
-                onClose();
-              }}
-            >
-              <span
-                className="elist-color"
-                style={{
-                  background: p.id === activeId ? "#3b82f6" : "#475569",
-                }}
-              />
-              <span className="elist-name">
-                <strong>{p.name}</strong>
-                <small>
-                  {p.cabinets.length} szaf ·{" "}
-                  {p.cabinets.reduce((s, c) => s + c.elements.length, 0)}{" "}
-                  elementów ·{" "}
-                  {new Date(p.updatedAt).toLocaleDateString("pl-PL")}
-                </small>
-              </span>
-            </li>
-          ))}
-        </ul>
       </div>
     </div>
   );
