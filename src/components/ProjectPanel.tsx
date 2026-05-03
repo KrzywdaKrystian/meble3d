@@ -3,11 +3,14 @@ import {
   useStore,
   useActiveProject,
   useActiveCabinet,
+  useActiveRoomLayout,
 } from "../store";
 import {
   PLINTH_DESCRIPTIONS,
   PLINTH_LABELS,
   PlinthType,
+  WallSide,
+  WALL_LABELS,
 } from "../types";
 
 const PLINTH_TYPES: PlinthType[] = [
@@ -27,6 +30,8 @@ export function ProjectPanel() {
     deleteCabinet,
     renameCabinet,
     setCabinetOffset,
+    setCabinetRotationY,
+    setCabinetAnchor,
     setCabinetOuter,
     scaleActiveCabinet,
     applyPlinth,
@@ -34,6 +39,8 @@ export function ProjectPanel() {
   } = useStore();
   const project = useActiveProject();
   const cabinet = useActiveCabinet();
+  const roomLayout = useActiveRoomLayout();
+  const roomEnabled = !!roomLayout?.enabled;
 
   // Lokalny state dla edytowalnych pól, żeby user mógł wpisać wartość
   // bez natychmiastowego zatwierdzenia (mniej rerenderów / mniej skoków).
@@ -224,66 +231,177 @@ export function ProjectPanel() {
 
         <div className="form-section-title">Pozycja szafy w zabudowie</div>
         <p className="hint">
-          Przesunięcie środka tej szafy względem środka projektu. Domyślnie
-          „+ Dostaw szafę” ustawia X tak, by szafa stanęła równo obok
-          poprzedniej.
+          Szafa może być wolnostojąca (ręczne offsety X/Y/Z) lub dosunięta
+          do wybranej ściany pomieszczenia – wtedy pozycja i obrót są
+          wyliczane automatycznie.
         </p>
-        <div className="form-row grid-3">
+        <div className="form-row">
           <label className="field">
-            <span className="field-label">Offset X [mm]</span>
+            <span className="field-label">Przyleganie do ściany</span>
             <span className="field-input">
-              <input
-                type="number"
-                inputMode="numeric"
-                value={cabinet.offsetX}
-                onChange={(e) =>
-                  setCabinetOffset(
-                    cabinet.id,
-                    parseFloat(e.target.value) || 0,
-                    cabinet.offsetY,
-                    cabinet.offsetZ
-                  )
-                }
-              />
-            </span>
-          </label>
-          <label className="field">
-            <span className="field-label">Offset Y [mm]</span>
-            <span className="field-input">
-              <input
-                type="number"
-                inputMode="numeric"
-                value={cabinet.offsetY}
-                onChange={(e) =>
-                  setCabinetOffset(
-                    cabinet.id,
-                    cabinet.offsetX,
-                    parseFloat(e.target.value) || 0,
-                    cabinet.offsetZ
-                  )
-                }
-              />
-            </span>
-          </label>
-          <label className="field">
-            <span className="field-label">Offset Z [mm]</span>
-            <span className="field-input">
-              <input
-                type="number"
-                inputMode="numeric"
-                value={cabinet.offsetZ}
-                onChange={(e) =>
-                  setCabinetOffset(
-                    cabinet.id,
-                    cabinet.offsetX,
-                    cabinet.offsetY,
-                    parseFloat(e.target.value) || 0
-                  )
-                }
-              />
+              <select
+                value={cabinet.anchor?.wall ?? "free"}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (v === "free") {
+                    setCabinetAnchor(cabinet.id, null);
+                  } else {
+                    setCabinetAnchor(cabinet.id, {
+                      wall: v as WallSide,
+                      offset: cabinet.anchor?.offset ?? 0,
+                      gap: cabinet.anchor?.gap ?? 0,
+                    });
+                  }
+                }}
+              >
+                <option value="free">Wolnostojąca (manualnie)</option>
+                <option value="N">Tylna ({WALL_LABELS.N.toLowerCase()})</option>
+                <option value="S">Przednia ({WALL_LABELS.S.toLowerCase()})</option>
+                <option value="W">Lewa</option>
+                <option value="E">Prawa</option>
+              </select>
             </span>
           </label>
         </div>
+        {cabinet.anchor && !roomEnabled && (
+          <p className="error-hint">
+            Pomieszczenie 3D jest wyłączone – włącz je w sekcji
+            „Pomieszczenie" w wyborze przestrzeni, aby przyleganie do ściany
+            zadziałało. Na razie pozycja jest wyliczana z manualnych offsetów.
+          </p>
+        )}
+
+        {cabinet.anchor ? (
+          <div className="form-row grid-3">
+            <label className="field">
+              <span className="field-label">Offset wzdłuż ściany [mm]</span>
+              <span className="field-input">
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  value={cabinet.anchor.offset}
+                  onChange={(e) =>
+                    setCabinetAnchor(cabinet.id, {
+                      ...cabinet.anchor!,
+                      offset: parseFloat(e.target.value) || 0,
+                    })
+                  }
+                />
+              </span>
+            </label>
+            <label className="field">
+              <span className="field-label">Odsunięcie od ściany [mm]</span>
+              <span className="field-input">
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  value={cabinet.anchor.gap ?? 0}
+                  onChange={(e) =>
+                    setCabinetAnchor(cabinet.id, {
+                      ...cabinet.anchor!,
+                      gap: parseFloat(e.target.value) || 0,
+                    })
+                  }
+                />
+              </span>
+            </label>
+            <label className="field">
+              <span className="field-label">Wysokość od podłogi [mm]</span>
+              <span className="field-input">
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  value={cabinet.offsetY}
+                  onChange={(e) =>
+                    setCabinetOffset(
+                      cabinet.id,
+                      cabinet.offsetX,
+                      parseFloat(e.target.value) || 0,
+                      cabinet.offsetZ
+                    )
+                  }
+                />
+              </span>
+            </label>
+          </div>
+        ) : (
+          <div className="form-row grid-3">
+            <label className="field">
+              <span className="field-label">Offset X [mm]</span>
+              <span className="field-input">
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  value={cabinet.offsetX}
+                  onChange={(e) =>
+                    setCabinetOffset(
+                      cabinet.id,
+                      parseFloat(e.target.value) || 0,
+                      cabinet.offsetY,
+                      cabinet.offsetZ
+                    )
+                  }
+                />
+              </span>
+            </label>
+            <label className="field">
+              <span className="field-label">Offset Y [mm]</span>
+              <span className="field-input">
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  value={cabinet.offsetY}
+                  onChange={(e) =>
+                    setCabinetOffset(
+                      cabinet.id,
+                      cabinet.offsetX,
+                      parseFloat(e.target.value) || 0,
+                      cabinet.offsetZ
+                    )
+                  }
+                />
+              </span>
+            </label>
+            <label className="field">
+              <span className="field-label">Offset Z [mm]</span>
+              <span className="field-input">
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  value={cabinet.offsetZ}
+                  onChange={(e) =>
+                    setCabinetOffset(
+                      cabinet.id,
+                      cabinet.offsetX,
+                      cabinet.offsetY,
+                      parseFloat(e.target.value) || 0
+                    )
+                  }
+                />
+              </span>
+            </label>
+          </div>
+        )}
+        {!cabinet.anchor && (
+          <div className="form-row">
+            <label className="field">
+              <span className="field-label">Obrót szafy wokół Y [°]</span>
+              <span className="field-input">
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  value={cabinet.rotationY ?? 0}
+                  onChange={(e) =>
+                    setCabinetRotationY(
+                      cabinet.id,
+                      parseFloat(e.target.value) || 0
+                    )
+                  }
+                />
+              </span>
+            </label>
+          </div>
+        )}
       </div>
 
       <ul className="elist">

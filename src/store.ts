@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import {
   Cabinet,
+  CabinetAnchor,
   ELEMENT_DEFAULT_COLOR,
   ELEMENT_DEFAULT_THICKNESS,
   ELEMENT_LABELS,
@@ -11,6 +12,7 @@ import {
   RoomAlcove,
   RoomLayout,
   RoomOpening,
+  WallSide,
   WardrobeElement,
   ElementType,
 } from "./types";
@@ -506,6 +508,8 @@ interface AppState {
   deleteCabinet: (id: string) => void;
   renameCabinet: (id: string, name: string) => void;
   setCabinetOffset: (id: string, x: number, y: number, z: number) => void;
+  setCabinetRotationY: (id: string, deg: number) => void;
+  setCabinetAnchor: (id: string, anchor: CabinetAnchor | null) => void;
   /** Ustawia wymiary szafy bez skalowania elementów (tylko podgląd kamery). */
   setCabinetOuter: (id: string, w: number, h: number, d: number) => void;
   /** Skaluje aktywną szafę: rozciąga elementy konstrukcyjne. */
@@ -957,6 +961,36 @@ export const useStore = create<AppState>()(
             ),
           }));
         },
+        setCabinetRotationY: (id, deg) => {
+          set((s) => ({
+            projects: s.projects.map((p) =>
+              p.id === s.activeId
+                ? touch({
+                    ...p,
+                    cabinets: p.cabinets.map((c) =>
+                      c.id === id ? { ...c, rotationY: deg } : c
+                    ),
+                  })
+                : p
+            ),
+          }));
+        },
+        setCabinetAnchor: (id, anchor) => {
+          set((s) => ({
+            projects: s.projects.map((p) =>
+              p.id === s.activeId
+                ? touch({
+                    ...p,
+                    cabinets: p.cabinets.map((c) =>
+                      c.id === id
+                        ? { ...c, anchor: anchor ?? undefined }
+                        : c
+                    ),
+                  })
+                : p
+            ),
+          }));
+        },
         setCabinetOuter: (id, w, h, d) => {
           set((s) => ({
             projects: s.projects.map((p) =>
@@ -1277,4 +1311,71 @@ export function useActiveCabinet(): Cabinet {
 export function useActiveRoomLayout(): RoomLayout | undefined {
   const room = useActiveRoom();
   return room.layout;
+}
+
+/**
+ * Wylicza końcową pozycję i rotację (Y) szafy w świecie.
+ * Gdy szafa ma `anchor` i layout pomieszczenia jest aktywny – pozycja oraz
+ * rotacja są pochodne z anchor + wymiarów ściany. W przeciwnym razie zwracamy
+ * manualne offset* + rotationY (lub 0).
+ */
+export function resolveCabinetTransform(
+  cabinet: Cabinet,
+  layout: RoomLayout | undefined
+): {
+  position: [number, number, number];
+  rotationY: number;
+  anchored: boolean;
+} {
+  const manual = {
+    position: [cabinet.offsetX, cabinet.offsetY, cabinet.offsetZ] as [
+      number,
+      number,
+      number,
+    ],
+    rotationY: ((cabinet.rotationY ?? 0) * Math.PI) / 180,
+    anchored: false,
+  };
+  if (!cabinet.anchor || !layout || !layout.enabled) return manual;
+  const a = cabinet.anchor;
+  const halfW = layout.width / 2;
+  const halfD = layout.depth / 2;
+  const gap = a.gap ?? 0;
+  const w = cabinet.outerWidth;
+  const d = cabinet.outerDepth;
+  const wall: WallSide = a.wall;
+  let x = 0;
+  let z = 0;
+  let rot = 0;
+  switch (wall) {
+    case "N":
+      // Tył szafy przy z=-halfD+gap, lewa krawędź szafy przy x=-halfW+offset.
+      x = -halfW + a.offset + w / 2;
+      z = -halfD + gap + d / 2;
+      rot = 0;
+      break;
+    case "S":
+      // Tył przy z=halfD-gap; offset od „lewej z wewnątrz" = +X strona.
+      x = halfW - a.offset - w / 2;
+      z = halfD - gap - d / 2;
+      rot = Math.PI;
+      break;
+    case "W":
+      // Tył przy x=-halfW+gap; offset od „lewej z wewnątrz" = +Z strona.
+      x = -halfW + gap + d / 2;
+      z = halfD - a.offset - w / 2;
+      rot = Math.PI / 2;
+      break;
+    case "E":
+      // Tył przy x=halfW-gap; offset od „lewej z wewnątrz" = -Z strona.
+      x = halfW - gap - d / 2;
+      z = -halfD + a.offset + w / 2;
+      rot = -Math.PI / 2;
+      break;
+  }
+  return {
+    position: [x, cabinet.offsetY, z],
+    rotationY: rot,
+    anchored: true,
+  };
 }

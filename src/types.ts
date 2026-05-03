@@ -36,6 +36,19 @@ export interface WardrobeElement {
 }
 
 /**
+ * Przyleganie szafy do ściany pomieszczenia.
+ * Pozycja i rotacja szafy są wtedy wyliczane z layoutu pomieszczenia
+ * - tył szafy jest dosunięty do wybranej ściany.
+ */
+export interface CabinetAnchor {
+  wall: WallSide;
+  /** Offset lewego boku szafy od „lewej" krawędzi ściany (jak patrzysz od wewnątrz). */
+  offset: number;
+  /** Odsunięcie tylnej ścianki szafy od wewnętrznej ściany pomieszczenia (mm). */
+  gap?: number;
+}
+
+/**
  * Pojedyncza szafa / moduł / zabudowa stojąca w obrębie projektu.
  * Projekt może zawierać wiele szaf ustawionych obok siebie.
  */
@@ -48,6 +61,10 @@ export interface Cabinet {
   offsetY: number;
   /** Z w mm: korekta głębokości jeśli moduły różnią się głębokością */
   offsetZ: number;
+  /** Manualny obrót szafy wokół Y w stopniach (gdy nie jest anchored). */
+  rotationY?: number;
+  /** Przyleganie do ściany pomieszczenia – nadpisuje offsetX/Z + rotationY. */
+  anchor?: CabinetAnchor;
   /** Wymiary gabarytowe szafy w mm */
   outerWidth: number;
   outerHeight: number;

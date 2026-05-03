@@ -1,8 +1,13 @@
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Grid, Environment, Html } from "@react-three/drei";
 import { Suspense, useEffect, useMemo } from "react";
-import { useActiveProject, useActiveRoomLayout, useStore } from "../store";
-import { Cabinet, WardrobeElement } from "../types";
+import {
+  resolveCabinetTransform,
+  useActiveProject,
+  useActiveRoomLayout,
+  useStore,
+} from "../store";
+import { Cabinet, RoomLayout, WardrobeElement } from "../types";
 import { WallsAndRoom } from "./WallsAndRoom";
 import * as THREE from "three";
 
@@ -88,18 +93,22 @@ function ElementMesh({ el }: { el: WardrobeElement }) {
 function CabinetGroup({
   cabinet,
   active,
+  layout,
 }: {
   cabinet: Cabinet;
   active: boolean;
+  layout: RoomLayout | undefined;
 }) {
   const showCabinetLabels = useStore((s) => s.showCabinetLabels);
+  const transform = resolveCabinetTransform(cabinet, layout);
   return (
     <group
       position={[
-        cabinet.offsetX * MM,
-        cabinet.offsetY * MM,
-        cabinet.offsetZ * MM,
+        transform.position[0] * MM,
+        transform.position[1] * MM,
+        transform.position[2] * MM,
       ]}
+      rotation={[0, transform.rotationY, 0]}
     >
       {/* Lekka „aureola” pod aktywną szafą żeby było widać którą edytujesz */}
       {active && (
@@ -168,11 +177,17 @@ export function Wardrobe3D() {
     let minZ = Infinity;
     let maxZ = -Infinity;
     for (const c of project.cabinets) {
-      minX = Math.min(minX, c.offsetX - c.outerWidth / 2);
-      maxX = Math.max(maxX, c.offsetX + c.outerWidth / 2);
-      maxH = Math.max(maxH, c.offsetY + c.outerHeight);
-      minZ = Math.min(minZ, c.offsetZ - c.outerDepth / 2);
-      maxZ = Math.max(maxZ, c.offsetZ + c.outerDepth / 2);
+      const t = resolveCabinetTransform(c, layout);
+      const [cx, cy, cz] = t.position;
+      // Po obrocie wokół Y zamiana wymiaru wzdłuż X i Z.
+      const horiz = Math.abs(Math.cos(t.rotationY)) > 0.5;
+      const halfX = horiz ? c.outerWidth / 2 : c.outerDepth / 2;
+      const halfZ = horiz ? c.outerDepth / 2 : c.outerWidth / 2;
+      minX = Math.min(minX, cx - halfX);
+      maxX = Math.max(maxX, cx + halfX);
+      maxH = Math.max(maxH, cy + c.outerHeight);
+      minZ = Math.min(minZ, cz - halfZ);
+      maxZ = Math.max(maxZ, cz + halfZ);
     }
     if (layout && layout.enabled) {
       minX = Math.min(minX, -layout.width / 2);
@@ -231,6 +246,7 @@ export function Wardrobe3D() {
             key={cab.id}
             cabinet={cab}
             active={cab.id === activeCabinetId}
+            layout={layout}
           />
         ))}
       </Suspense>
