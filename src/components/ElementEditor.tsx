@@ -224,6 +224,59 @@ function ElementForm({ el }: { el: WardrobeElement }) {
         </label>
       </div>
 
+      <div className="form-section-title">Oklejenie krawędzi (ABS)</div>
+      <div className="form-row grid-3">
+        <label className="field">
+          <span className="field-label">Materiał okleiny</span>
+          <span className="field-input">
+            <input
+              type="text"
+              value={el.edgeMaterial ?? ""}
+              placeholder="np. ABS 2 mm biały"
+              onChange={(e) => u({ edgeMaterial: e.target.value })}
+            />
+          </span>
+        </label>
+      </div>
+      <div className="form-row" style={{ gap: 12, flexWrap: "wrap" }}>
+        <label className="field-toggle">
+          <input
+            type="checkbox"
+            checked={!!el.edgeTop}
+            onChange={(e) => u({ edgeTop: e.target.checked })}
+          />
+          <span>Góra</span>
+        </label>
+        <label className="field-toggle">
+          <input
+            type="checkbox"
+            checked={!!el.edgeBottom}
+            onChange={(e) => u({ edgeBottom: e.target.checked })}
+          />
+          <span>Dół</span>
+        </label>
+        <label className="field-toggle">
+          <input
+            type="checkbox"
+            checked={!!el.edgeLeft}
+            onChange={(e) => u({ edgeLeft: e.target.checked })}
+          />
+          <span>Lewa</span>
+        </label>
+        <label className="field-toggle">
+          <input
+            type="checkbox"
+            checked={!!el.edgeRight}
+            onChange={(e) => u({ edgeRight: e.target.checked })}
+          />
+          <span>Prawa</span>
+        </label>
+      </div>
+      <p className="hint">
+        Krawędzie liczone na panelu „rozłożonym płasko" (dwa największe
+        wymiary). Lista mb okleiny w zakładce Lista i w PDF.
+      </p>
+
       <div className="form-row">
         <label className="field">
           <span className="field-label">Notatka</span>

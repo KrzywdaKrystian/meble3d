@@ -33,6 +33,13 @@ export interface WardrobeElement {
   rotationX?: number;
   rotationY?: number;
   rotationZ?: number;
+  /** Oklejenie krawędzi ABS – po jednej fladze na krawędź panelu (widok flat). */
+  edgeTop?: boolean;
+  edgeBottom?: boolean;
+  edgeLeft?: boolean;
+  edgeRight?: boolean;
+  /** Materiał oklejenia (np. „ABS 2 mm biały"). Wspólny dla wszystkich krawędzi panelu. */
+  edgeMaterial?: string;
 }
 
 /**

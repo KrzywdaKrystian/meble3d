@@ -8,6 +8,7 @@ import {
 } from "../lib/hardware";
 import { buildQuote, formatPLN } from "../lib/pricing";
 import { buildProjectDxf } from "../lib/dxf";
+import { projectEdgeBandingTotals } from "../lib/edges";
 
 interface SourceElement {
   el: WardrobeElement;
@@ -103,6 +104,11 @@ export function PartsList() {
     () => buildQuote(project, pricing),
     [project, pricing]
   );
+  const edgeTotals = useMemo(
+    () => projectEdgeBandingTotals(project),
+    [project]
+  );
+  const edgeMetersTotal = edgeTotals.reduce((s, e) => s + e.meters, 0);
 
   const cabinetsForScope = useMemo(() => {
     if (scope === "all") return project.cabinets;
@@ -241,6 +247,36 @@ export function PartsList() {
         >
           Pobierz DXF
         </button>
+      </div>
+
+      <div className="form-section-title no-print">
+        Oklejenie ABS ({edgeMetersTotal.toFixed(2)} mb)
+      </div>
+      <div className="parts-table-wrap no-print">
+        <table className="parts-table">
+          <thead>
+            <tr>
+              <th>Materiał okleiny</th>
+              <th>mb</th>
+            </tr>
+          </thead>
+          <tbody>
+            {edgeTotals.map((e) => (
+              <tr key={e.material}>
+                <td>{e.material}</td>
+                <td className="num">{e.meters.toFixed(2)}</td>
+              </tr>
+            ))}
+            {edgeTotals.length === 0 && (
+              <tr>
+                <td colSpan={2} className="empty">
+                  Brak zaznaczonych krawędzi do okleiny – w edycji elementu
+                  zaznacz Góra / Dół / Lewa / Prawa.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
 
       <div className="form-section-title no-print">Lista okuć (auto)</div>

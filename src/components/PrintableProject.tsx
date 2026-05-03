@@ -11,6 +11,7 @@ import {
   hardwareSubtotal,
 } from "../lib/hardware";
 import { buildQuote, formatPLN } from "../lib/pricing";
+import { projectEdgeBandingTotals } from "../lib/edges";
 import { Plan2D } from "./Plan2D";
 import { PartsList } from "./PartsList";
 import { TechnicalDrawings } from "./TechnicalDrawings";
@@ -23,6 +24,8 @@ export function PrintableProject() {
   const hardware = computeHardwareForProject(project);
   const hardwareSum = hardwareSubtotal(hardware);
   const quote = buildQuote(project, pricing);
+  const edgeTotals = projectEdgeBandingTotals(project);
+  const edgeMetersTotal = edgeTotals.reduce((s, e) => s + e.meters, 0);
   const totalElements = project.cabinets.reduce(
     (s, c) => s + c.elements.length,
     0
@@ -138,6 +141,40 @@ export function PrintableProject() {
           Lista zbiorcza elementów (zsumowana ze wszystkich szaf)
         </h2>
         <PartsList />
+      </section>
+
+      <section className="print-page print-edges-page">
+        <h2 className="print-h2">
+          Oklejenie krawędzi ABS ({edgeMetersTotal.toFixed(2)} mb)
+        </h2>
+        <p className="print-note">
+          Suma metrów bieżących okleiny per materiał. Na każdym panelu
+          krawędzie liczone na rozłożeniu płaskim (dwa największe wymiary):
+          Góra/Dół = długość, Lewa/Prawa = wysokość.
+        </p>
+        <table className="print-elements-table">
+          <thead>
+            <tr>
+              <th>Materiał okleiny</th>
+              <th>mb</th>
+            </tr>
+          </thead>
+          <tbody>
+            {edgeTotals.map((e) => (
+              <tr key={e.material}>
+                <td>{e.material}</td>
+                <td>{e.meters.toFixed(2)}</td>
+              </tr>
+            ))}
+            {edgeTotals.length === 0 && (
+              <tr>
+                <td colSpan={2} className="print-empty">
+                  Żaden panel nie ma zaznaczonych krawędzi do oklejania.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </section>
 
       <section className="print-page print-hardware-page">
