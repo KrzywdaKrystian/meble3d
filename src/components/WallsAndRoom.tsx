@@ -2,13 +2,11 @@ import { useEffect, useMemo } from "react";
 import * as THREE from "three";
 import { useStore, useActiveRoomLayout } from "../store";
 import { RoomAlcove, RoomLayout, RoomOpening, WallSide } from "../types";
+import { wallLengthFor } from "../lib/roomGeometry";
 
 const MM = 0.001;
 
-// Boks pomocniczy do logiki - długość ściany w mm wzdłuż jej osi.
-function wallLength(layout: RoomLayout, side: WallSide): number {
-  return side === "N" || side === "S" ? layout.width : layout.depth;
-}
+const wallLength = wallLengthFor;
 
 /**
  * Buduje geometrię jednej ściany.

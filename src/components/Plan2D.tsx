@@ -6,6 +6,11 @@ import {
   useStore,
 } from "../store";
 import { Cabinet, RoomLayout, WallSide } from "../types";
+import {
+  alcoveFloorRect,
+  alcoveSleeveRects,
+  cutoutRect,
+} from "../lib/roomGeometry";
 
 /** Stała: ile mm na piksel SVG. ViewBox automatycznie się dopasuje, ale
  *  używamy mm bezpośrednio jako jednostki SVG. */
@@ -272,149 +277,6 @@ function RoomShape({ layout }: { layout: RoomLayout }) {
       })}
     </g>
   );
-}
-
-function cutoutRect(
-  layout: RoomLayout,
-  wall: WallSide,
-  offset: number,
-  width: number
-): { x: number; y: number; w: number; h: number } {
-  const halfW = layout.width / 2;
-  const halfD = layout.depth / 2;
-  const t = layout.wallThickness;
-  switch (wall) {
-    case "N":
-      // u od lewej z wewnątrz = +X od -halfW
-      return {
-        x: -halfW + offset,
-        y: -halfD - t,
-        w: width,
-        h: t,
-      };
-    case "S":
-      // u od lewej z wewnątrz = +X strona, więc rośnie w stronę -X
-      return {
-        x: halfW - offset - width,
-        y: halfD,
-        w: width,
-        h: t,
-      };
-    case "W":
-      // u od lewej z wewnątrz = +Z strona, rośnie w -Z
-      return {
-        x: -halfW - t,
-        y: halfD - offset - width,
-        w: t,
-        h: width,
-      };
-    case "E":
-      // u od lewej z wewnątrz = -Z strona, rośnie w +Z
-      return {
-        x: halfW,
-        y: -halfD + offset,
-        w: t,
-        h: width,
-      };
-  }
-}
-
-function alcoveSleeveRects(
-  layout: RoomLayout,
-  wall: WallSide,
-  offset: number,
-  width: number,
-  depth: number
-): Array<{ x: number; y: number; w: number; h: number }> {
-  const halfW = layout.width / 2;
-  const halfD = layout.depth / 2;
-  const t = layout.wallThickness;
-  switch (wall) {
-    case "N": {
-      const xStart = -halfW + offset;
-      const xEnd = xStart + width;
-      const zBack = -halfD - depth;
-      return [
-        // Lewy bok wnęki
-        { x: xStart - t, y: zBack, w: t, h: depth + t },
-        // Prawy bok
-        { x: xEnd, y: zBack, w: t, h: depth + t },
-        // Tylna ścianka wnęki
-        { x: xStart - t, y: zBack - t, w: width + 2 * t, h: t },
-      ];
-    }
-    case "S": {
-      const xStart = halfW - offset;
-      const xEnd = xStart - width;
-      const zFront = halfD + depth;
-      return [
-        { x: xStart, y: halfD, w: t, h: depth + t },
-        { x: xEnd - t, y: halfD, w: t, h: depth + t },
-        { x: xEnd - t, y: zFront, w: width + 2 * t, h: t },
-      ];
-    }
-    case "W": {
-      const zStart = halfD - offset;
-      const zEnd = zStart - width;
-      const xOut = -halfW - depth;
-      return [
-        { x: xOut, y: zStart, w: depth + t, h: t },
-        { x: xOut, y: zEnd - t, w: depth + t, h: t },
-        { x: xOut - t, y: zEnd - t, w: t, h: width + 2 * t },
-      ];
-    }
-    case "E": {
-      const zStart = -halfD + offset;
-      const zEnd = zStart + width;
-      const xOut = halfW + depth;
-      return [
-        { x: halfW, y: zStart - t, w: depth + t, h: t },
-        { x: halfW, y: zEnd, w: depth + t, h: t },
-        { x: xOut, y: zStart - t, w: t, h: width + 2 * t },
-      ];
-    }
-  }
-}
-
-function alcoveFloorRect(
-  layout: RoomLayout,
-  wall: WallSide,
-  offset: number,
-  width: number,
-  depth: number
-): { x: number; y: number; w: number; h: number } {
-  const halfW = layout.width / 2;
-  const halfD = layout.depth / 2;
-  switch (wall) {
-    case "N":
-      return {
-        x: -halfW + offset,
-        y: -halfD - depth,
-        w: width,
-        h: depth,
-      };
-    case "S":
-      return {
-        x: halfW - offset - width,
-        y: halfD,
-        w: width,
-        h: depth,
-      };
-    case "W":
-      return {
-        x: -halfW - depth,
-        y: halfD - offset - width,
-        w: depth,
-        h: width,
-      };
-    case "E":
-      return {
-        x: halfW,
-        y: -halfD + offset,
-        w: depth,
-        h: width,
-      };
-  }
 }
 
 /** Etykiety długości na środku każdej ściany. */
