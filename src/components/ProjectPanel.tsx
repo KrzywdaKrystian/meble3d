@@ -67,6 +67,9 @@ export function ProjectPanel() {
   const [plinthRecess, setPlinthRecess] = useState<string>(
     String(cabinet.plinthRecess ?? 30)
   );
+  const [sideToFloor, setSideToFloor] = useState<boolean>(
+    cabinet.sideToFloor ?? false
+  );
 
   useEffect(() => {
     setScaleW(String(cabinet.outerWidth));
@@ -75,6 +78,7 @@ export function ProjectPanel() {
     setPlinthType(cabinet.plinthType ?? "staly");
     setPlinthHeight(String(cabinet.plinthHeight ?? 100));
     setPlinthRecess(String(cabinet.plinthRecess ?? 30));
+    setSideToFloor(cabinet.sideToFloor ?? false);
   }, [
     cabinet.id,
     cabinet.outerWidth,
@@ -83,6 +87,7 @@ export function ProjectPanel() {
     cabinet.plinthType,
     cabinet.plinthHeight,
     cabinet.plinthRecess,
+    cabinet.sideToFloor,
   ]);
 
   const applyScale = () => {
@@ -121,6 +126,9 @@ export function ProjectPanel() {
   const handleApplyPlinth = () => {
     const h = Math.max(0, parseFloat(plinthHeight) || 0);
     const r = Math.max(0, parseFloat(plinthRecess) || 0);
+    const sideMode = sideToFloor
+      ? "Boki będą sięgać do podłogi (cokół wpasowany między nimi)."
+      : "Boki będą stać na cokole (cokół przebiega na całej szerokości).";
     if (
       confirm(
         "Wymienić cokół w szafie „" +
@@ -129,10 +137,12 @@ export function ProjectPanel() {
           PLINTH_LABELS[plinthType] +
           "” (wys. " +
           h +
-          " mm)?\n\nIstniejące elementy typu cokół i nóżka zostaną usunięte. Korpus szafy zostanie podniesiony / opuszczony tak, by spasował się z nowym cokołem."
+          " mm)?\n\n" +
+          sideMode +
+          "\n\nIstniejące elementy typu cokół i nóżka zostaną usunięte, a wysokość boków zostanie znormalizowana do wybranego trybu."
       )
     ) {
-      applyPlinth(plinthType, h, r);
+      applyPlinth(plinthType, h, r, sideToFloor);
     }
   };
 
@@ -533,6 +543,45 @@ export function ProjectPanel() {
           </label>
         )}
       </div>
+
+      <div className="plinth-options">
+        <label
+          className={"plinth-card" + (!sideToFloor ? " active" : "")}
+        >
+          <input
+            type="radio"
+            name="side-mode"
+            checked={!sideToFloor}
+            onChange={() => setSideToFloor(false)}
+          />
+          <div className="plinth-card-body">
+            <div className="plinth-title">Boki do wysokości cokołu</div>
+            <div className="plinth-desc">
+              Klasyczny układ: boki siedzą na cokole, cokół przebiega pod
+              całą szerokością szafy. Wysokość boków = H − wysokość cokołu.
+            </div>
+          </div>
+        </label>
+        <label
+          className={"plinth-card" + (sideToFloor ? " active" : "")}
+        >
+          <input
+            type="radio"
+            name="side-mode"
+            checked={sideToFloor}
+            onChange={() => setSideToFloor(true)}
+          />
+          <div className="plinth-card-body">
+            <div className="plinth-title">Boki do podłogi</div>
+            <div className="plinth-desc">
+              Boki na całą wysokość szafy, cokół wpasowany między nimi
+              (węższy o&nbsp;2&nbsp;grubości boku). Bardziej masywny,
+              stabilny układ.
+            </div>
+          </div>
+        </label>
+      </div>
+
       <div className="form-actions">
         <button className="btn primary" onClick={handleApplyPlinth}>
           Zastosuj cokół
@@ -546,6 +595,10 @@ export function ProjectPanel() {
           {cabinet.plinthType === "cofniety"
             ? ", cofnięty o " + (cabinet.plinthRecess ?? 0) + " mm"
             : ""}
+          . Boki:{" "}
+          <strong>
+            {cabinet.sideToFloor ? "do podłogi" : "do wysokości cokołu"}
+          </strong>
           .
         </p>
       )}

@@ -52,6 +52,13 @@ export interface Cabinet {
   plinthType?: PlinthType;
   plinthHeight?: number;
   plinthRecess?: number;
+  /**
+   * Czy boki sięgają do samej podłogi.
+   * - true  – boki na całą wysokość szafy, cokół wpasowany między nimi,
+   * - false (domyślnie) – boki kończą się na wysokości cokołu, cokół
+   *   przebiega pod całą szerokością.
+   */
+  sideToFloor?: boolean;
   elements: WardrobeElement[];
 }
 

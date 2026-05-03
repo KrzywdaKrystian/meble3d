@@ -192,13 +192,17 @@ function buildPlinthElements(
   outerWidth: number,
   outerDepth: number,
   height: number,
-  recess: number
+  recess: number,
+  sideToFloor: boolean
 ): Omit<WardrobeElement, "id">[] {
   if (height <= 0 && type !== "brak") return [];
   const t = 18;
   const els: Omit<WardrobeElement, "id">[] = [];
   const halfW = outerWidth / 2;
   const halfD = outerDepth / 2;
+  // Gdy boki sięgają do podłogi, panel cokołu przebiega MIĘDZY bokami,
+  // więc jest węższy o 2 grubości boku.
+  const panelWidth = sideToFloor ? Math.max(0, outerWidth - 2 * t) : outerWidth;
 
   const legSize = 50;
   const legInset = 60;
@@ -212,8 +216,10 @@ function buildPlinthElements(
   if (type === "staly") {
     els.push({
       type: "cokol",
-      name: "Cokół przedni (zabudowany)",
-      width: outerWidth,
+      name: sideToFloor
+        ? "Cokół przedni (między bokami)"
+        : "Cokół przedni (zabudowany)",
+      width: panelWidth,
       height,
       depth: t,
       x: 0,
@@ -245,7 +251,7 @@ function buildPlinthElements(
     els.push({
       type: "cokol",
       name: "Maskownica frontowa",
-      width: outerWidth,
+      width: panelWidth,
       height: maskH,
       depth: t,
       x: 0,
@@ -321,7 +327,7 @@ function buildPlinthElements(
     els.push({
       type: "cokol",
       name: "Listwa cokołowa systemowa",
-      width: outerWidth,
+      width: panelWidth,
       height: stripH,
       depth: 5,
       x: 0,
@@ -466,7 +472,12 @@ interface AppState {
   /** Skaluje aktywną szafę: rozciąga elementy konstrukcyjne. */
   scaleActiveCabinet: (w: number, h: number, d: number) => void;
   /** Wymienia elementy cokołu/nóżek aktywnej szafy. */
-  applyPlinth: (type: PlinthType, height: number, recess?: number) => void;
+  applyPlinth: (
+    type: PlinthType,
+    height: number,
+    recess?: number,
+    sideToFloor?: boolean
+  ) => void;
 
   // Elementy (operują na aktywnej szafie)
   addElement: (type: ElementType) => void;
@@ -841,20 +852,40 @@ export const useStore = create<AppState>()(
             })
           );
         },
-        applyPlinth: (type, height, recess) => {
+        applyPlinth: (type, height, recess, sideToFloor) => {
           set((s) =>
             patchActiveCabinet(s, (c) => {
+              const stf = sideToFloor ?? c.sideToFloor ?? false;
               const oldHeight = c.plinthHeight ?? 100;
               const dy = height - oldHeight;
+              // Wyznaczamy docelowe wymiary boków:
+              // - boki do podłogi: pełna wysokość szafy, środek na H/2,
+              // - boki do cokołu (klasycznie): wysokość = H - cokol, siedzą
+              //   na cokole.
+              const sideH = stf
+                ? c.outerHeight
+                : Math.max(0, c.outerHeight - height);
+              const sideY = stf
+                ? c.outerHeight / 2
+                : height + sideH / 2;
               const carcass = c.elements
                 .filter((e) => e.type !== "cokol" && e.type !== "nozka")
-                .map((e) => (dy ? { ...e, y: e.y + dy } : e));
+                .map((e) => {
+                  // Boki normalizujemy zawsze, niezależnie od ich starej
+                  // wysokości / pozycji – żeby tryb był spójny.
+                  if (e.type === "bok") {
+                    return { ...e, height: sideH, y: sideY };
+                  }
+                  // Pozostałe elementy korpusu przesuwamy razem z cokołem.
+                  return dy ? { ...e, y: e.y + dy } : e;
+                });
               const plinth = buildPlinthElements(
                 type,
                 c.outerWidth,
                 c.outerDepth,
                 Math.max(0, height),
-                Math.max(0, recess ?? c.plinthRecess ?? 30)
+                Math.max(0, recess ?? c.plinthRecess ?? 30),
+                stf
               ).map((e) => ({ id: uid(), ...e }));
               return {
                 ...c,
@@ -862,6 +893,7 @@ export const useStore = create<AppState>()(
                 plinthType: type,
                 plinthHeight: height,
                 plinthRecess: recess ?? c.plinthRecess ?? 30,
+                sideToFloor: stf,
               };
             })
           );
