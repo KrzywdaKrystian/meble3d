@@ -8,6 +8,9 @@ import {
   PlinthType,
   Project,
   Room,
+  RoomAlcove,
+  RoomLayout,
+  RoomOpening,
   WardrobeElement,
   ElementType,
 } from "./types";
@@ -412,6 +415,18 @@ function buildDefaultRoom(name = "Mieszkanie"): Room {
   };
 }
 
+function buildDefaultLayout(): RoomLayout {
+  return {
+    width: 4000,
+    depth: 3000,
+    height: 2600,
+    wallThickness: 100,
+    enabled: true,
+    openings: [],
+    alcoves: [],
+  };
+}
+
 // ===== Pomocnicze =====
 
 function touch(p: Project): Project {
@@ -442,12 +457,36 @@ interface AppState {
   showDimensions: boolean;
   /** Czy pokazywać etykiety nad szafami (nazwa + gabaryty). */
   showCabinetLabels: boolean;
+  /** Czy renderować ściany pomieszczenia w 3D. */
+  showWalls: boolean;
+  /** Czy zamiast ścian pokazać tylko obrys podłogi. */
+  showFloorOutlineOnly: boolean;
+
+  // Layout pomieszczenia
+  toggleRoomLayout: (roomId: string, enabled: boolean) => void;
+  setRoomLayout: (roomId: string, patch: Partial<RoomLayout>) => void;
+  addRoomOpening: (roomId: string, op: Omit<RoomOpening, "id">) => void;
+  updateRoomOpening: (
+    roomId: string,
+    id: string,
+    patch: Partial<RoomOpening>
+  ) => void;
+  removeRoomOpening: (roomId: string, id: string) => void;
+  addRoomAlcove: (roomId: string, alcove: Omit<RoomAlcove, "id">) => void;
+  updateRoomAlcove: (
+    roomId: string,
+    id: string,
+    patch: Partial<RoomAlcove>
+  ) => void;
+  removeRoomAlcove: (roomId: string, id: string) => void;
 
   // Pokoje
   setActive: (id: string) => void;
   setSelected: (id: string | null) => void;
   setShowDimensions: (v: boolean) => void;
   setShowCabinetLabels: (v: boolean) => void;
+  setShowWalls: (v: boolean) => void;
+  setShowFloorOutlineOnly: (v: boolean) => void;
   setActiveRoom: (roomId: string) => void;
   addRoom: (name?: string) => void;
   renameRoom: (id: string, name: string) => void;
@@ -524,6 +563,8 @@ export const useStore = create<AppState>()(
         selectedElementId: null,
         showDimensions: false,
         showCabinetLabels: false,
+        showWalls: true,
+        showFloorOutlineOnly: false,
 
         setActive: (id) =>
           set((s) => {
@@ -555,6 +596,118 @@ export const useStore = create<AppState>()(
         },
         setShowDimensions: (v) => set({ showDimensions: v }),
         setShowCabinetLabels: (v) => set({ showCabinetLabels: v }),
+        setShowWalls: (v) => set({ showWalls: v }),
+        setShowFloorOutlineOnly: (v) => set({ showFloorOutlineOnly: v }),
+
+        toggleRoomLayout: (roomId, enabled) =>
+          set((s) => ({
+            rooms: s.rooms.map((r) => {
+              if (r.id !== roomId) return r;
+              if (!enabled) {
+                return r.layout
+                  ? { ...r, layout: { ...r.layout, enabled: false } }
+                  : r;
+              }
+              return {
+                ...r,
+                layout: r.layout
+                  ? { ...r.layout, enabled: true }
+                  : buildDefaultLayout(),
+              };
+            }),
+          })),
+        setRoomLayout: (roomId, patch) =>
+          set((s) => ({
+            rooms: s.rooms.map((r) => {
+              if (r.id !== roomId) return r;
+              const base = r.layout ?? buildDefaultLayout();
+              return { ...r, layout: { ...base, ...patch } };
+            }),
+          })),
+        addRoomOpening: (roomId, op) =>
+          set((s) => ({
+            rooms: s.rooms.map((r) => {
+              if (r.id !== roomId) return r;
+              const base = r.layout ?? buildDefaultLayout();
+              return {
+                ...r,
+                layout: {
+                  ...base,
+                  openings: [...base.openings, { id: uid(), ...op }],
+                },
+              };
+            }),
+          })),
+        updateRoomOpening: (roomId, id, patch) =>
+          set((s) => ({
+            rooms: s.rooms.map((r) => {
+              if (r.id !== roomId || !r.layout) return r;
+              return {
+                ...r,
+                layout: {
+                  ...r.layout,
+                  openings: r.layout.openings.map((o) =>
+                    o.id === id ? { ...o, ...patch } : o
+                  ),
+                },
+              };
+            }),
+          })),
+        removeRoomOpening: (roomId, id) =>
+          set((s) => ({
+            rooms: s.rooms.map((r) => {
+              if (r.id !== roomId || !r.layout) return r;
+              return {
+                ...r,
+                layout: {
+                  ...r.layout,
+                  openings: r.layout.openings.filter((o) => o.id !== id),
+                },
+              };
+            }),
+          })),
+        addRoomAlcove: (roomId, alcove) =>
+          set((s) => ({
+            rooms: s.rooms.map((r) => {
+              if (r.id !== roomId) return r;
+              const base = r.layout ?? buildDefaultLayout();
+              return {
+                ...r,
+                layout: {
+                  ...base,
+                  alcoves: [...base.alcoves, { id: uid(), ...alcove }],
+                },
+              };
+            }),
+          })),
+        updateRoomAlcove: (roomId, id, patch) =>
+          set((s) => ({
+            rooms: s.rooms.map((r) => {
+              if (r.id !== roomId || !r.layout) return r;
+              return {
+                ...r,
+                layout: {
+                  ...r.layout,
+                  alcoves: r.layout.alcoves.map((a) =>
+                    a.id === id ? { ...a, ...patch } : a
+                  ),
+                },
+              };
+            }),
+          })),
+        removeRoomAlcove: (roomId, id) =>
+          set((s) => ({
+            rooms: s.rooms.map((r) => {
+              if (r.id !== roomId || !r.layout) return r;
+              return {
+                ...r,
+                layout: {
+                  ...r.layout,
+                  alcoves: r.layout.alcoves.filter((a) => a.id !== id),
+                },
+              };
+            }),
+          })),
         setActiveRoom: (roomId) =>
           set((s) => {
             const room = s.rooms.find((r) => r.id === roomId);
@@ -1017,7 +1170,7 @@ export const useStore = create<AppState>()(
     },
     {
       name: "meble3d-store-v1",
-      version: 3,
+      version: 4,
       migrate: (persistedState: any, fromVersion: number) => {
         if (!persistedState) return persistedState;
         let state = persistedState;
@@ -1037,6 +1190,15 @@ export const useStore = create<AppState>()(
               ? projects
               : [buildDefaultProject(defaultRoom.id)],
             activeId: projects[0]?.id ?? state.activeId,
+          };
+        }
+        // v3 -> v4: dodano opcjonalny `layout` do Room. Nic nie zmieniamy
+        // w danych - po prostu pole pozostaje undefined dla starych przestrzeni.
+        if (fromVersion < 4) {
+          // no-op - dla pewności normalizujemy tablice
+          state = {
+            ...state,
+            rooms: (state.rooms ?? []).map((r: any) => ({ ...r })),
           };
         }
         // v2 -> v3: zawiń elementy projektu w pierwszą szafę (Cabinet)
@@ -1110,4 +1272,9 @@ export function useActiveCabinet(): Cabinet {
     project.cabinets.find((c) => c.id === activeCabinetId) ??
     project.cabinets[0]
   );
+}
+
+export function useActiveRoomLayout(): RoomLayout | undefined {
+  const room = useActiveRoom();
+  return room.layout;
 }

@@ -1,8 +1,9 @@
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Grid, Environment, Html } from "@react-three/drei";
 import { Suspense, useEffect, useMemo } from "react";
-import { useActiveProject, useStore } from "../store";
+import { useActiveProject, useActiveRoomLayout, useStore } from "../store";
 import { Cabinet, WardrobeElement } from "../types";
+import { WallsAndRoom } from "./WallsAndRoom";
 import * as THREE from "three";
 
 const MM = 0.001; // milimetry -> metry sceny
@@ -145,14 +146,14 @@ function CabinetGroup({
 
 export function Wardrobe3D() {
   const project = useActiveProject();
+  const layout = useActiveRoomLayout();
+  const roomEnabled = !!layout?.enabled;
   const activeCabinetId = useStore((s) => s.activeCabinetId);
   const setSelected = useStore((s) => s.setSelected);
 
-  // Bryła otaczająca wszystkie szafy w projekcie – dla kamery i ustawienia podłogi.
+  // Bryła otaczająca wszystkie szafy w projekcie + pomieszczenie (gdy włączone)
+  // – używana do ustawienia kamery.
   const bounds = useMemo(() => {
-    if (project.cabinets.length === 0) {
-      return { centerX: 0, centerY: 1, maxSpan: 2 };
-    }
     let minX = Infinity;
     let maxX = -Infinity;
     let maxH = 0;
@@ -165,11 +166,21 @@ export function Wardrobe3D() {
       minZ = Math.min(minZ, c.offsetZ - c.outerDepth / 2);
       maxZ = Math.max(maxZ, c.offsetZ + c.outerDepth / 2);
     }
+    if (layout && layout.enabled) {
+      minX = Math.min(minX, -layout.width / 2);
+      maxX = Math.max(maxX, layout.width / 2);
+      maxH = Math.max(maxH, layout.height);
+      minZ = Math.min(minZ, -layout.depth / 2);
+      maxZ = Math.max(maxZ, layout.depth / 2);
+    }
+    if (!Number.isFinite(minX)) {
+      return { centerX: 0, centerY: 1, maxSpan: 2 };
+    }
     const centerX = (minX + maxX) / 2;
     const centerY = maxH / 2;
     const maxSpan = Math.max(maxX - minX, maxH, maxZ - minZ);
     return { centerX, centerY, maxSpan };
-  }, [project]);
+  }, [project, layout]);
 
   const target: [number, number, number] = [
     bounds.centerX * MM,
@@ -206,6 +217,7 @@ export function Wardrobe3D() {
 
       <Suspense fallback={null}>
         <Environment preset="apartment" />
+        <WallsAndRoom />
         {project.cabinets.map((cab) => (
           <CabinetGroup
             key={cab.id}
@@ -215,14 +227,16 @@ export function Wardrobe3D() {
         ))}
       </Suspense>
 
-      <mesh
-        rotation={[-Math.PI / 2, 0, 0]}
-        position={[0, 0, 0]}
-        receiveShadow
-      >
-        <planeGeometry args={[40, 40]} />
-        <meshStandardMaterial color="#2b3140" roughness={1} />
-      </mesh>
+      {!roomEnabled && (
+        <mesh
+          rotation={[-Math.PI / 2, 0, 0]}
+          position={[0, 0, 0]}
+          receiveShadow
+        >
+          <planeGeometry args={[40, 40]} />
+          <meshStandardMaterial color="#2b3140" roughness={1} />
+        </mesh>
+      )}
 
       <Grid
         args={[40, 40]}

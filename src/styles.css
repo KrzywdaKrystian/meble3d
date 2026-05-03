@@ -226,6 +226,46 @@ textarea {
   color: white;
 }
 
+.canvas-toggle:disabled,
+.canvas-toggle.disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.field-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  user-select: none;
+}
+
+.field-toggle input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 0;
+  min-height: auto;
+  accent-color: var(--primary);
+}
+
+.sub-form {
+  margin-top: 6px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.sub-form.has-error {
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+.error-hint {
+  color: #fca5a5;
+  font-size: 12px;
+  margin: 0;
+}
+
 /* ===== 3D dimension labels ===== */
 .dim-label-wrap,
 .cab-label-wrap {

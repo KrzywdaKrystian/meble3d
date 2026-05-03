@@ -103,6 +103,54 @@ export interface Room {
   id: string;
   name: string;
   createdAt: number;
+  layout?: RoomLayout;
+}
+
+export type WallSide = "N" | "E" | "S" | "W";
+
+export const WALL_LABELS: Record<WallSide, string> = {
+  N: "Tylna",
+  S: "Przednia (od wejścia)",
+  W: "Lewa",
+  E: "Prawa",
+};
+
+export interface RoomOpening {
+  id: string;
+  wall: WallSide;
+  kind: "door" | "window";
+  /** Offset w mm od początku ściany (od lewej, patrząc od wewnątrz). */
+  offset: number;
+  width: number;
+  height: number;
+  /** Wysokość parapetu nad podłogą; drzwi = 0, okno typowo 900. */
+  sillHeight: number;
+}
+
+export interface RoomAlcove {
+  id: string;
+  wall: WallSide;
+  /** Offset wnęki w mm od początku ściany. */
+  offset: number;
+  /** Szerokość wnęki wzdłuż ściany. */
+  width: number;
+  /** Głębokość wnęki w mm (na zewnątrz pomieszczenia). */
+  depth: number;
+}
+
+export interface RoomLayout {
+  /** Wewnętrzny wymiar w mm (X, lewy-prawy). */
+  width: number;
+  /** Wewnętrzny wymiar w mm (Z, przód-tył). */
+  depth: number;
+  /** Wysokość w mm (od podłogi do sufitu). */
+  height: number;
+  /** Grubość ścian w mm. */
+  wallThickness: number;
+  /** Master-toggle: pozwala wyłączyć pomieszczenie bez utraty danych. */
+  enabled: boolean;
+  openings: RoomOpening[];
+  alcoves: RoomAlcove[];
 }
 
 export const ELEMENT_LABELS: Record<ElementType, string> = {

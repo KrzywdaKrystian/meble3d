@@ -29,6 +29,10 @@ export default function App() {
   const setShowDimensions = useStore((s) => s.setShowDimensions);
   const showCabinetLabels = useStore((s) => s.showCabinetLabels);
   const setShowCabinetLabels = useStore((s) => s.setShowCabinetLabels);
+  const showWalls = useStore((s) => s.showWalls);
+  const setShowWalls = useStore((s) => s.setShowWalls);
+  const showFloorOutlineOnly = useStore((s) => s.showFloorOutlineOnly);
+  const setShowFloorOutlineOnly = useStore((s) => s.setShowFloorOutlineOnly);
 
   const totalElements = project.cabinets.reduce(
     (s, c) => s + c.elements.length,
@@ -94,6 +98,37 @@ export default function App() {
               }
             >
               {showCabinetLabels ? "Etykiety szaf: ON" : "Etykiety szaf: OFF"}
+            </button>
+            <button
+              className={"canvas-toggle" + (showWalls ? " active" : "")}
+              onClick={() => setShowWalls(!showWalls)}
+              title={
+                showWalls
+                  ? "Ukryj ściany pomieszczenia"
+                  : "Pokaż ściany pomieszczenia (jeśli przestrzeń ma layout)"
+              }
+            >
+              {showWalls ? "Ściany: ON" : "Ściany: OFF"}
+            </button>
+            <button
+              className={
+                "canvas-toggle" +
+                (showFloorOutlineOnly ? " active" : "") +
+                (!showWalls ? " disabled" : "")
+              }
+              onClick={() =>
+                showWalls && setShowFloorOutlineOnly(!showFloorOutlineOnly)
+              }
+              disabled={!showWalls}
+              title={
+                !showWalls
+                  ? "Włącz najpierw Ściany"
+                  : showFloorOutlineOnly
+                    ? "Pokaż pełne ściany"
+                    : "Pokaż tylko obrys podłogi (bez ścian)"
+              }
+            >
+              {showFloorOutlineOnly ? "Tylko obrys: ON" : "Tylko obrys: OFF"}
             </button>
           </div>
           <div className="canvas-hint">
