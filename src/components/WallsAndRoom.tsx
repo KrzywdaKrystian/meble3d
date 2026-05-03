@@ -11,14 +11,18 @@ function wallLength(layout: RoomLayout, side: WallSide): number {
 }
 
 /**
- * Buduje geometrię jednej ściany w lokalnym układzie (u, v):
- *  - oś u biegnie wzdłuż ściany (od lewej do prawej, patrząc z wewnątrz),
- *  - oś v to wysokość (0 = podłoga, H = sufit),
- *  - extrude wychodzi w +Z, stając się grubością ściany na zewnątrz.
+ * Buduje geometrię jednej ściany.
  *
- * Obsługuje:
- *  - otwory (drzwi/okna) jako shape.holes,
- *  - wnęki pełnowysokie jako notch w dolnej krawędzi (kształt 8-wierzchołkowy).
+ * Konwencja lokalna (po rotacji):
+ *  - oś u (lokalne +X) biegnie wzdłuż ściany od lewej do prawej, patrząc od
+ *    wewnątrz pomieszczenia,
+ *  - oś v (lokalne +Y) to wysokość (0 = podłoga, H = sufit),
+ *  - extrude w lokalne +Z biegnie do WEWNĄTRZ pomieszczenia, więc przesunięcie
+ *    pozycji ustawia ściankę na zewnętrznej krawędzi, a wewnętrzna krawędź
+ *    siedzi po grubości ściany od wewnątrz.
+ *
+ * Otwory (drzwi/okna) i wnęki to prostokątne dziury w shape - dla wnęk
+ * pełnowysokie, dla otworów na zadanej wysokości parapetu.
  */
 function buildWallGeometry(
   layout: RoomLayout,
@@ -26,36 +30,15 @@ function buildWallGeometry(
 ): THREE.ExtrudeGeometry {
   const length = wallLength(layout, side) * MM;
   const height = layout.height * MM;
-  const alcoves = layout.alcoves
-    .filter((a) => a.wall === side)
-    .sort((a, b) => a.offset - b.offset);
-  const openings = layout.openings.filter((o) => o.wall === side);
 
   const shape = new THREE.Shape();
-  // Lewa krawędź (góra → dół), potem dolna krawędź z wcięciami, prawa krawędź, górna.
-  shape.moveTo(0, height);
-  shape.lineTo(0, 0);
-  let cursorU = 0;
-  for (const a of alcoves) {
-    const u0 = a.offset * MM;
-    const u1 = (a.offset + a.width) * MM;
-    const dOut = -a.depth * MM; // wnęka idzie na zewnątrz (w stronę -V po wycince)
-    if (u0 > cursorU) {
-      shape.lineTo(u0, 0);
-    }
-    // Schodek na zewnątrz: w dół o `dOut` (ujemne v), wzdłuż ściany do u1, z powrotem.
-    shape.lineTo(u0, dOut);
-    shape.lineTo(u1, dOut);
-    shape.lineTo(u1, 0);
-    cursorU = u1;
-  }
-  if (cursorU < length) {
-    shape.lineTo(length, 0);
-  }
+  shape.moveTo(0, 0);
+  shape.lineTo(length, 0);
   shape.lineTo(length, height);
+  shape.lineTo(0, height);
   shape.closePath();
 
-  for (const op of openings) {
+  for (const op of layout.openings.filter((o) => o.wall === side)) {
     const u0 = op.offset * MM;
     const u1 = (op.offset + op.width) * MM;
     const v0 = op.sillHeight * MM;
@@ -69,6 +52,18 @@ function buildWallGeometry(
     shape.holes.push(hole);
   }
 
+  for (const a of layout.alcoves.filter((x) => x.wall === side)) {
+    const u0 = a.offset * MM;
+    const u1 = (a.offset + a.width) * MM;
+    const hole = new THREE.Path();
+    hole.moveTo(u0, 0);
+    hole.lineTo(u1, 0);
+    hole.lineTo(u1, height);
+    hole.lineTo(u0, height);
+    hole.closePath();
+    shape.holes.push(hole);
+  }
+
   return new THREE.ExtrudeGeometry(shape, {
     depth: layout.wallThickness * MM,
     bevelEnabled: false,
@@ -77,11 +72,18 @@ function buildWallGeometry(
 }
 
 /**
- * Pozycja i rotacja meshu ściany tak, by jego wewnętrzna ściana siedziała
- * równo z odpowiednią krawędzią pomieszczenia, a extrude rosło na zewnątrz.
+ * Pozycja i rotacja meshu ściany.
  *
- * Lokalny układ shape: oś X = u (od lewej do prawej patrząc z wewnątrz),
- * oś Y = wysokość, +Z = grubość ściany.
+ * Konwencja: lokalne (0,0,0) ustawiamy w zewnętrznym narożniku ściany
+ * (po lewej, jak patrzysz na ścianę z wewnątrz). Lokalne +X biegnie wzdłuż
+ * ściany na prawo (od wewnątrz), a lokalne +Z biegnie do wewnątrz - czyli
+ * extrude wykrawa ścianę o grubości t w stronę środka pomieszczenia,
+ * a wewnętrzna krawędź siedzi równo ze ścianą na ±halfW lub ±halfD.
+ *
+ *   N (tylna,  -Z): rotationY = 0      (looking towards -Z from inside)
+ *   S (przód,  +Z): rotationY = π
+ *   W (lewa,   -X): rotationY = +π/2
+ *   E (prawa,  +X): rotationY = -π/2
  */
 function wallTransform(
   layout: RoomLayout,
@@ -92,24 +94,13 @@ function wallTransform(
   const t = layout.wallThickness * MM;
   switch (side) {
     case "N":
-      // Tylna ściana: u biegnie z -X do +X (z lewej na prawą patrząc na nią
-      // od wnętrza), patrząc na +Z. Rotacja Y = π aby +Z extrude poszedł w -Z.
-      return { position: [halfW, 0, -halfD - t], rotationY: Math.PI };
+      return { position: [-halfW, 0, -halfD - t], rotationY: 0 };
     case "S":
-      // Przednia ściana: u od +X do -X (przeciwnie), Z na zewnątrz to +Z.
-      return { position: [-halfW, 0, halfD], rotationY: 0 };
+      return { position: [halfW, 0, halfD + t], rotationY: Math.PI };
     case "W":
-      // Lewa ściana: u od +Z do -Z, normalna na zewnątrz to -X.
-      return {
-        position: [-halfW - t, 0, halfD],
-        rotationY: -Math.PI / 2,
-      };
+      return { position: [-halfW - t, 0, halfD], rotationY: Math.PI / 2 };
     case "E":
-      // Prawa ściana: u od -Z do +Z, normalna na zewnątrz to +X.
-      return {
-        position: [halfW, 0, -halfD],
-        rotationY: Math.PI / 2,
-      };
+      return { position: [halfW + t, 0, -halfD], rotationY: -Math.PI / 2 };
   }
 }
 
